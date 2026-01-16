@@ -10,6 +10,7 @@ import {
 	ScryfallCard,
 } from "./types";
 import { IncomingMessage } from "http";
+import logger from "../core/logger";
 
 // Fetch latest bulk data URL from Scryfall
 async function getLatestBulkUrl(): Promise<string> {
@@ -57,23 +58,23 @@ async function getLatestBulkUrl(): Promise<string> {
 let SCRYFALL_BULK_URL: string = "";
 
 async function downloadAndSeedCards() {
-	console.log("Fetching latest Scryfall bulk data URL...");
+	logger.info("Fetching latest Scryfall bulk data URL...");
 	try {
 		SCRYFALL_BULK_URL = await getLatestBulkUrl();
-		console.log(`Using: ${SCRYFALL_BULK_URL}`);
-	} catch (e) {
-		console.error("Failed to fetch bulk URL:", e);
-		throw e;
+		logger.info(`Using: ${SCRYFALL_BULK_URL}`);
+	} catch (error) {
+		logger.info("Failed to fetch Scryfall bulk data URL");
+		logger.catchError(error);
+		throw error;
 	}
 
-	console.log("Starting Scryfall bulk card import...");
-
+	logger.info("Starting Scryfall bulk card import...");
 	return new Promise<void>((resolve, reject) => {
 		const handleResponse = async (response: IncomingMessage) => {
 			// Handle redirects
 			if (response.statusCode === 301 || response.statusCode === 302) {
 				const redirectUrl = response.headers.location;
-				console.log(`Following redirect to: ${redirectUrl}`);
+				logger.info(`Following redirect to: ${redirectUrl}`);
 				if (!redirectUrl) {
 					throw new Error("Redirect location missing");
 				}
@@ -90,38 +91,43 @@ async function downloadAndSeedCards() {
 			try {
 				let buffer = "";
 				let cardCount = 0;
-				const batchSize = 500;
+				const batchSize = 50;
 				let batch: AppCard[] = [];
 				let hasher = crypto.createHash("sha256");
 
 				response.on("data", async (chunk: Buffer) => {
 					const str = chunk.toString();
-					buffer += str;
 					hasher.update(str);
+					buffer += str;
 
-					// Simple line-by-line JSON array parsing
-					while (buffer.includes("\n")) {
-						const lineEnd = buffer.indexOf("\n");
-						let line = buffer.substring(0, lineEnd).trim();
-						buffer = buffer.substring(lineEnd + 1);
+					// Process complete lines only, keep incomplete line in buffer
+					const lines = buffer.split("\n");
+					// Last element is incomplete (or empty if buffer ends with \n)
+					buffer = lines.pop() || "";
 
-						// Skip array markers
+					for (const line of lines) {
+						const trimmed = line.trim();
+
+						// Skip array markers and empty lines
 						if (
-							line === "[" ||
-							line === "]" ||
-							line === "" ||
-							line === ","
+							trimmed === "[" ||
+							trimmed === "]" ||
+							trimmed === "" ||
+							trimmed === ","
 						)
 							continue;
-						if (line.endsWith(",")) line = line.slice(0, -1);
+
+						let cleanLine = trimmed;
+						if (cleanLine.endsWith(",")) {
+							cleanLine = cleanLine.slice(0, -1);
+						}
 
 						try {
-							const card: ScryfallCard = JSON.parse(line);
+							const card: ScryfallCard = JSON.parse(cleanLine);
 
 							// Transform and batch insert
 							batch.push({
 								scryfall_id: card.id,
-
 								is_legal_commander:
 									!card.legalities ||
 									card.legalities.commander !== "banned",
@@ -131,12 +137,24 @@ async function downloadAndSeedCards() {
 							cardCount++;
 
 							if (batch.length >= batchSize) {
+								// Pause to let database catch up
+								response.pause();
 								await insertCardBatch(batch);
 								batch = [];
-								console.log(`Processed ${cardCount} cards...`);
+								logger.info(
+									`Processed ${cardCount} cards... (Memory: ${Math.round(
+										process.memoryUsage().heapUsed /
+											1024 /
+											1024
+									)}MB)`
+								);
+								response.resume();
 							}
-						} catch (e) {
-							console.error("Line parse error (skipping):", e);
+						} catch (error) {
+							logger.error(
+								`Line parse error (skipping) L${line}`
+							);
+							logger.catchError(error);
 						}
 					}
 				});
@@ -156,7 +174,7 @@ async function downloadAndSeedCards() {
 						[SCRYFALL_BULK_URL, checksum, cardCount]
 					);
 
-					console.log(`✓ Imported ${cardCount} cards successfully`);
+					logger.info(`✓ Imported ${cardCount} cards successfully`);
 					resolve();
 				});
 			} catch (error) {
@@ -213,9 +231,10 @@ async function insertCardBatch(cards: AppCard[]) {
 export async function seedCards() {
 	try {
 		await downloadAndSeedCards();
-		console.log("Card seeding completed");
+		logger.info("Card seeding completed");
 	} catch (error) {
-		console.error("Seeding error:", error);
+		logger.info("Card seeding failed");
+		logger.catchError(error);
 		process.exit(1);
 	}
 }

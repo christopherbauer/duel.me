@@ -1,3 +1,4 @@
+import logger from "../core/logger";
 import { query } from "../db/pool";
 
 const migration_001 = `
@@ -133,11 +134,12 @@ INSERT INTO migrations (name) VALUES ('001_initial_schema') ON CONFLICT (name) D
 
 export async function migrate() {
 	try {
-		console.log("Starting database migrations...");
+		logger.info("Starting database migrations...");
 		await query(migration_001);
-		console.log("Migration 001 completed successfully");
+		logger.info("Migration 001 completed successfully");
 	} catch (error) {
-		console.error("Migration failed:", error);
+		logger.info(`Migration failed`);
+		logger.catchError(error);
 		throw error;
 	}
 }

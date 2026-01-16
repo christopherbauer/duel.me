@@ -7,6 +7,8 @@ import { query, closePool } from "./db/pool";
 import cardsRouter from "./routes/cards";
 import decksRouter from "./routes/decks";
 import gamesRouter from "./routes/games";
+import logger from "./core/logger";
+import { requestLogHandler } from "./core/requestLogHandler";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -34,6 +36,7 @@ const swaggerOptions = {
 	apis: ["./src/routes/*.ts"],
 };
 
+app.use(requestLogHandler);
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -62,7 +65,7 @@ app.use(
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
-	console.log("SIGTERM signal received: closing HTTP server");
+	logger.error("SIGTERM signal received: closing HTTP server");
 	await closePool();
 	process.exit(0);
 });
@@ -70,13 +73,13 @@ process.on("SIGTERM", async () => {
 // Initialize and start
 async function main() {
 	try {
-		console.log("Initializing database...");
+		logger.info("Initializing database...");
 		await migrate();
-		console.log("Database initialized");
+		logger.info("Database initialized");
 
 		app.listen(PORT, () => {
-			console.log(`Server running on port ${PORT}`);
-			console.log(
+			logger.info(`Server running on port ${PORT}`);
+			logger.info(
 				`Swagger docs available at http://localhost:${PORT}/api-docs`
 			);
 		});

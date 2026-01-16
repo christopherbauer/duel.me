@@ -34,7 +34,7 @@ dev:
 	docker compose up
 
 seed:
-    docker exec -it duelme_backend sh -c "npm run seed"
+	docker exec -it duelme_backend sh -c "NODE_OPTIONS='--max-old-space-size=3072' npm run seed"
 
 stop:
 	docker compose stop

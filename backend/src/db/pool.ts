@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import logger from "../core/logger";
 
 const pool = new Pool({
 	connectionString: process.env.DATABASE_URL,
@@ -13,10 +14,17 @@ export async function query(text: string, params?: any[]) {
 	try {
 		const res = await pool.query(text, params);
 		const duration = Date.now() - start;
-		console.log("Executed query", { text, duration, rows: res.rowCount });
+		logger.debug(
+			`Executed query\n${JSON.stringify({
+				text,
+				duration,
+				rows: res.rowCount,
+			})}`
+		);
 		return res;
 	} catch (error) {
-		console.error("Database query error", { text, error });
+		logger.info(`Database query error`);
+		logger.catchError(error);
 	}
 }
 
