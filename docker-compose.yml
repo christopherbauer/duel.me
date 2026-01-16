@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: duelme_postgres
+    environment:
+      POSTGRES_USER: duelme
+      POSTGRES_PASSWORD: duelme_dev
+      POSTGRES_DB: duelme
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U duelme"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: duelme_backend
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://duelme:duelme_dev@postgres:5432/duelme
+      PORT: 3011
+    ports:
+      - "3011:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/dist:/app/dist
+      - ./backend/node_modules:/app/node_modules
+    command: npm run dev
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: duelme_frontend
+    environment:
+      NODE_ENV: development
+      REACT_APP_API_URL: http://localhost:3011
+    ports:
+      - "3010:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/node_modules:/app/node_modules
+    command: npm start
+    restart: unless-stopped
