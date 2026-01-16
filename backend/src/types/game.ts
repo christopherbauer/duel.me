@@ -68,7 +68,7 @@ export interface GameObject {
 	counters?: Record<string, number>;
 	attachments?: string[];
 	notes?: string;
-	position?: number;
+	position?: { x: number; y: number };
 	created_at: string;
 	updated_at: string;
 }
@@ -126,4 +126,5 @@ export interface GameObjectView {
 	is_flipped?: boolean;
 	counters?: Record<string, number>;
 	notes?: string;
+	position?: { x: number; y: number };
 }

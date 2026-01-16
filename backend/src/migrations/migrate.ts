@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS game_objects (
   counters JSONB DEFAULT '{}', -- e.g., {'+1/+1': 3, 'poison': 1}
   attachments UUID[], -- IDs of cards attached to this object
   notes TEXT,
-  position INT, -- For ordering (e.g., stack position)
+  position JSONB, -- For battlefield positioning: {x: number, y: number}
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -130,6 +130,24 @@ CREATE INDEX idx_game_actions_action_type ON game_actions(action_type);
 
 -- Record migration
 INSERT INTO migrations (name) VALUES ('001_initial_schema') ON CONFLICT (name) DO NOTHING;
+
+-- Alter position column if it exists and is the wrong type
+ALTER TABLE IF EXISTS game_objects
+  ALTER COLUMN position TYPE JSONB USING NULL;
+`;
+
+const migration_002 = `
+-- Ensure position column is JSONB (idempotent)
+BEGIN;
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns 
+      WHERE table_name='game_objects' AND column_name='position' AND data_type != 'jsonb') THEN
+      ALTER TABLE game_objects ALTER COLUMN position TYPE JSONB USING NULL;
+    END IF;
+  END $$;
+COMMIT;
+
+INSERT INTO migrations (name) VALUES ('002_position_jsonb') ON CONFLICT (name) DO NOTHING;
 `;
 
 export async function migrate() {
@@ -137,6 +155,9 @@ export async function migrate() {
 		logger.info("Starting database migrations...");
 		await query(migration_001);
 		logger.info("Migration 001 completed successfully");
+
+		await query(migration_002);
+		logger.info("Migration 002 completed successfully");
 	} catch (error) {
 		logger.info(`Migration failed`);
 		logger.catchError(error);

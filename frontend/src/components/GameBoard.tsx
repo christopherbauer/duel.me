@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { api } from "../api";
 import { useGameStore } from "../store";
-import { GameState } from "../store";
 
 export const GameBoard: React.FC = () => {
 	const {
@@ -11,17 +10,14 @@ export const GameBoard: React.FC = () => {
 		gameState,
 		setGameState,
 	} = useGameStore();
-	const [loading, setLoading] = useState(false);
+	const [draggedCard, setDraggedCard] = useState<string | null>(null);
+	const [dragStart, setDragStart] = useState<{
+		cardId: string;
+		initialPos: { x: number; y: number };
+		mousePos: { x: number; y: number };
+	} | null>(null);
 
-	useEffect(() => {
-		if (currentGameId) {
-			loadGameState();
-			const interval = setInterval(loadGameState, 1000); // Poll every second
-			return () => clearInterval(interval);
-		}
-	}, [currentGameId, viewerSeat]);
-
-	const loadGameState = async () => {
+	const loadGameState = useCallback(async () => {
 		if (!currentGameId) return;
 		try {
 			const response = await api.getGame(currentGameId, viewerSeat);
@@ -29,7 +25,15 @@ export const GameBoard: React.FC = () => {
 		} catch (err) {
 			console.error("Failed to load game state:", err);
 		}
-	};
+	}, [currentGameId, viewerSeat, setGameState]);
+
+	useEffect(() => {
+		if (currentGameId) {
+			loadGameState();
+			const interval = setInterval(loadGameState, 5000);
+			return () => clearInterval(interval);
+		}
+	}, [currentGameId, viewerSeat, loadGameState]);
 
 	if (!gameState) {
 		return <div style={styles.loading}>Loading game...</div>;
@@ -40,6 +44,9 @@ export const GameBoard: React.FC = () => {
 
 	const seat1Life = gameState.seat1_life;
 	const seat2Life = gameState.seat2_life;
+
+	const playerObjects = viewerSeat === 1 ? seat1Objects : seat2Objects;
+	const opponentObjects = viewerSeat === 1 ? seat2Objects : seat1Objects;
 
 	return (
 		<div style={styles.container}>
@@ -54,8 +61,8 @@ export const GameBoard: React.FC = () => {
 			</div>
 
 			<div style={styles.board}>
-				{/* Opponent (top) */}
-				<div style={styles.seatSection}>
+				{/* Opponent (top) - 10% */}
+				<div style={styles.opponentSection}>
 					<div style={styles.seatLabel}>
 						{viewerSeat === 1
 							? "Seat 2 (Opponent)"
@@ -85,57 +92,33 @@ export const GameBoard: React.FC = () => {
 						<ZoneDisplay
 							zone="hand"
 							label="Hand"
-							objects={
-								viewerSeat === 1
-									? seat2Objects.filter(
-											(o) => o.zone === "hand"
-									  ).length
-									: seat1Objects.filter(
-											(o) => o.zone === "hand"
-									  ).length
-							}
+							objects={opponentObjects.filter(
+								(o) => o.zone === "hand"
+							)}
 							redacted={true}
 						/>
 						<ZoneDisplay
 							zone="library"
 							label="Library"
-							objects={
-								viewerSeat === 1
-									? seat2Objects.filter(
-											(o) => o.zone === "library"
-									  ).length
-									: seat1Objects.filter(
-											(o) => o.zone === "library"
-									  ).length
-							}
+							objects={opponentObjects.filter(
+								(o) => o.zone === "library"
+							)}
 							redacted={true}
 						/>
 						<ZoneDisplay
 							zone="graveyard"
 							label="Graveyard"
-							objects={
-								viewerSeat === 1
-									? seat2Objects.filter(
-											(o) => o.zone === "graveyard"
-									  )
-									: seat1Objects.filter(
-											(o) => o.zone === "graveyard"
-									  )
-							}
+							objects={opponentObjects.filter(
+								(o) => o.zone === "graveyard"
+							)}
 							redacted={false}
 						/>
 						<ZoneDisplay
 							zone="exile"
 							label="Exile"
-							objects={
-								viewerSeat === 1
-									? seat2Objects.filter(
-											(o) => o.zone === "exile"
-									  )
-									: seat1Objects.filter(
-											(o) => o.zone === "exile"
-									  )
-							}
+							objects={opponentObjects.filter(
+								(o) => o.zone === "exile"
+							)}
 							redacted={false}
 						/>
 					</div>
@@ -144,29 +127,103 @@ export const GameBoard: React.FC = () => {
 				{/* Battlefield (middle) */}
 				<div style={styles.battlefieldSection}>
 					<div style={styles.zoneLabel}>Battlefield</div>
-					<div style={styles.battlefieldGrid}>
+					<div
+						style={styles.battlefieldGrid}
+						onDragOver={(e) => e.preventDefault()}
+						onDrop={(e) => {
+							e.preventDefault();
+							const cardId = e.dataTransfer.getData("text/plain");
+							
+							if (cardId) {
+								if (dragStart && dragStart.cardId === cardId) {
+									// Dragging an existing battlefield card (delta movement)
+									const deltaX = e.clientX - dragStart.mousePos.x;
+									const deltaY = e.clientY - dragStart.mousePos.y;
+									
+									// Apply delta to initial position
+									const newX = dragStart.initialPos.x + deltaX;
+									const newY = dragStart.initialPos.y + deltaY;
+									
+									executeAction("move_to_battlefield", {
+										objectId: cardId,
+										position: { x: newX, y: newY },
+									});
+									setDragStart(null);
+									setDraggedCard(null);
+								} else {
+									// Dragging from hand (absolute positioning, centered on cursor)
+									const rect = (
+										e.currentTarget as HTMLElement
+									).getBoundingClientRect();
+									const x = e.clientX - rect.left - 75; // Center card (half of 150px width)
+									const y = e.clientY - rect.top - 100; // Center card (rough center height)
+
+									executeAction("move_to_battlefield", {
+										objectId: cardId,
+										position: { x, y },
+									});
+									setDraggedCard(null);
+								}
+							}
+						}}
+					>
 						{gameState.objects
 							.filter((o) => o.zone === "battlefield")
 							.map((obj) => (
 								<div
 									key={obj.id}
-									style={styles.battlefieldCard}
+									draggable
+									onDragStart={(e) => {
+										e.dataTransfer.effectAllowed = "move";
+										e.dataTransfer.setData(
+											"text/plain",
+											obj.id
+										);
+										setDraggedCard(obj.id);
+										setDragStart({
+											cardId: obj.id,
+											initialPos: {
+												x: obj.position ? obj.position.x : 0,
+												y: obj.position ? obj.position.y : 0,
+											},
+											mousePos: {
+												x: e.clientX,
+												y: e.clientY,
+											},
+										});
+									}}
+									onDragEnd={() => {
+										setDraggedCard(null);
+										setDragStart(null);
+									}}
+									style={{
+										...styles.positionedCard,
+										left: `${
+											obj.position ? obj.position.x : 0
+										}px`,
+										top: `${
+											obj.position ? obj.position.y : 0
+										}px`,
+										opacity:
+											draggedCard === obj.id ? 0.5 : 1,
+									}}
 								>
-									<div style={styles.cardName}>
-										{obj.card?.name || "Unknown Card"}
-									</div>
-									{obj.is_tapped && (
-										<div style={styles.tappedOverlay}>
-											TAPPED
-										</div>
-									)}
+									<CardImage
+										card={obj.card}
+										isTapped={obj.is_tapped}
+										onDoubleClick={() =>
+											executeAction("tap", {
+												objectId: obj.id,
+											})
+										}
+									/>
 								</div>
 							))}
 					</div>
 				</div>
 
-				{/* Your side (bottom) */}
-				<div style={styles.seatSection}>
+				{/* Your side (bottom) - 20% */}
+				<div style={styles.playerSection}>
 					<div style={styles.seatLabel}>Seat {viewerSeat} (You)</div>
 					<div style={styles.lifeCounter}>
 						<span style={styles.lifeValue}>
@@ -192,57 +249,34 @@ export const GameBoard: React.FC = () => {
 						<ZoneDisplay
 							zone="hand"
 							label="Hand"
-							objects={
-								viewerSeat === 1
-									? seat1Objects.filter(
-											(o) => o.zone === "hand"
-									  )
-									: seat2Objects.filter(
-											(o) => o.zone === "hand"
-									  )
-							}
+							objects={playerObjects.filter(
+								(o) => o.zone === "hand"
+							)}
 							redacted={false}
+							onCardDragStart={(cardId) => setDraggedCard(cardId)}
 						/>
 						<ZoneDisplay
 							zone="library"
 							label="Library"
-							objects={
-								viewerSeat === 1
-									? seat1Objects.filter(
-											(o) => o.zone === "library"
-									  ).length
-									: seat2Objects.filter(
-											(o) => o.zone === "library"
-									  ).length
-							}
+							objects={playerObjects.filter(
+								(o) => o.zone === "library"
+							)}
 							redacted={false}
 						/>
 						<ZoneDisplay
 							zone="graveyard"
 							label="Graveyard"
-							objects={
-								viewerSeat === 1
-									? seat1Objects.filter(
-											(o) => o.zone === "graveyard"
-									  )
-									: seat2Objects.filter(
-											(o) => o.zone === "graveyard"
-									  )
-							}
+							objects={playerObjects.filter(
+								(o) => o.zone === "graveyard"
+							)}
 							redacted={false}
 						/>
 						<ZoneDisplay
 							zone="exile"
 							label="Exile"
-							objects={
-								viewerSeat === 1
-									? seat1Objects.filter(
-											(o) => o.zone === "exile"
-									  )
-									: seat2Objects.filter(
-											(o) => o.zone === "exile"
-									  )
-							}
+							objects={playerObjects.filter(
+								(o) => o.zone === "exile"
+							)}
 							redacted={false}
 						/>
 					</div>
@@ -263,13 +297,13 @@ export const GameBoard: React.FC = () => {
 		</div>
 	);
 
-	async function executeAction(action: string, amount?: number) {
+	async function executeAction(action: string, metadata?: any) {
 		if (!currentGameId) return;
 		try {
 			await api.executeAction(currentGameId, {
 				seat: viewerSeat,
 				action_type: action,
-				metadata: { amount },
+				metadata,
 			});
 			await loadGameState();
 		} catch (err) {
@@ -281,8 +315,9 @@ export const GameBoard: React.FC = () => {
 interface ZoneDisplayProps {
 	zone: string;
 	label: string;
-	objects: any[] | number;
+	objects: any[];
 	redacted: boolean;
+	onCardDragStart?: (cardId: string) => void;
 }
 
 const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
@@ -290,25 +325,85 @@ const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 	label,
 	objects,
 	redacted,
+	onCardDragStart,
 }) => {
-	const count = typeof objects === "number" ? objects : objects.length;
+	const count = objects.length;
 
 	return (
 		<div style={styles.zone}>
-			<div style={styles.zoneLabel}>{label}</div>
+			<div style={styles.zoneLabel}>
+				{label} ({count})
+			</div>
 			<div style={styles.zoneContent}>
 				{redacted ? (
 					<div style={styles.redactedCount}>{count} card(s)</div>
-				) : typeof objects === "number" ? (
-					<div>{count} card(s)</div>
+				) : objects.length === 0 ? (
+					<div style={styles.emptyZone}>Empty</div>
 				) : (
 					objects.map((obj) => (
-						<div key={obj.id} style={styles.card}>
-							{obj.card?.name}
+						<div
+							key={obj.id}
+							draggable
+							onDragStart={(e) => {
+								e.dataTransfer.effectAllowed = "move";
+								e.dataTransfer.setData("text/plain", obj.id);
+								if (onCardDragStart) onCardDragStart(obj.id);
+							}}
+							style={styles.cardItem}
+						>
+							{obj.card ? obj.card.name : "Unknown"}
 						</div>
 					))
 				)}
 			</div>
+		</div>
+	);
+};
+
+interface CardImageProps {
+	card?: any;
+	isTapped?: boolean;
+	onDoubleClick?: () => void;
+}
+
+const CardImage: React.FC<CardImageProps> = ({
+	card,
+	isTapped,
+	onDoubleClick,
+}) => {
+	const imageUrl =
+		(card && card.image_uris && card.image_uris.normal) ||
+		(card && card.image_uris && card.image_uris.large) ||
+		null;
+
+	return (
+		<div
+			style={{
+				...styles.cardImage,
+				transform: isTapped ? "rotate(90deg)" : "rotate(0deg)",
+			}}
+			onDoubleClick={onDoubleClick}
+		>
+			{imageUrl ? (
+				<img
+					src={imageUrl}
+					alt={card ? card.name : "Unknown Card"}
+					style={styles.cardImageImg}
+					onError={(e) => {
+						(e.target as HTMLImageElement).style.display = "none";
+					}}
+				/>
+			) : (
+				<div style={styles.cardPlaceholder}>
+					<div style={styles.cardPlaceholderName}>
+						{card ? card.name : "Unknown"}
+					</div>
+					<div style={styles.cardPlaceholderType}>
+						{card ? card.type_line : ""}
+					</div>
+				</div>
+			)}
+			{isTapped && <div style={styles.tappedLabel}>TAP</div>}
 		</div>
 	);
 };
@@ -341,13 +436,22 @@ const styles = {
 		flex: 1,
 		gap: "20px",
 	},
-	seatSection: {
-		flex: 1,
+	opponentSection: {
+		flex: "0 0 10%",
 		backgroundColor: "#2a2a2a",
 		padding: "15px",
 		borderRadius: "8px",
 		display: "flex",
 		flexDirection: "column" as const,
+	},
+	playerSection: {
+		flex: "0 0 20%",
+		backgroundColor: "#2a2a2a",
+		padding: "15px",
+		borderRadius: "8px",
+		display: "flex",
+		flexDirection: "column" as const,
+		overflow: "auto" as const,
 	},
 	seatLabel: {
 		fontSize: "14px",
@@ -379,41 +483,79 @@ const styles = {
 		cursor: "pointer",
 	},
 	battlefieldSection: {
-		flex: 2,
+		flex: "0 0 70%",
 		backgroundColor: "#1a1a1a",
 		padding: "15px",
 		borderRadius: "8px",
+		position: "relative" as const,
+		overflow: "hidden" as const,
+		display: "flex",
+		flexDirection: "column" as const,
 	},
 	battlefieldGrid: {
-		display: "grid",
-		gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-		gap: "10px",
-		marginTop: "10px",
-	},
-	battlefieldCard: {
-		backgroundColor: "#333",
-		padding: "10px",
-		borderRadius: "4px",
 		position: "relative" as const,
+		width: "100%",
+		height: "100%",
+		padding: "15px",
+		border: "2px dashed #444",
+		borderRadius: "8px",
+		backgroundColor: "#0d0d0d",
 	},
-	cardName: {
-		fontSize: "12px",
-		overflow: "hidden",
-		textOverflow: "ellipsis",
-	},
-	tappedOverlay: {
+	positionedCard: {
 		position: "absolute" as const,
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		backgroundColor: "rgba(0, 0, 0, 0.5)",
+		width: "150px",
+		cursor: "move",
+		userSelect: "none" as const,
+		transition: "box-shadow 0.2s",
+	},
+	cardImage: {
+		cursor: "pointer",
+		transition: "transform 0.2s",
+		perspective: "1000px",
+	},
+	cardImageImg: {
+		width: "100%",
+		height: "auto",
+		borderRadius: "8px",
+		boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+		userSelect: "none" as const,
+	},
+	cardPlaceholder: {
+		width: "100%",
+		aspectRatio: "2/3",
+		backgroundColor: "#222",
+		border: "2px solid #444",
+		borderRadius: "8px",
+		padding: "10px",
 		display: "flex",
-		alignItems: "center",
+		flexDirection: "column" as const,
 		justifyContent: "center",
-		fontSize: "10px",
-		color: "#f00",
+		alignItems: "center",
+		textAlign: "center" as const,
+		fontSize: "12px",
+		boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+	},
+	cardPlaceholderName: {
 		fontWeight: "bold" as const,
+		marginBottom: "5px",
+		fontSize: "11px",
+	},
+	cardPlaceholderType: {
+		fontSize: "9px",
+		color: "#999",
+	},
+	tappedLabel: {
+		position: "absolute" as const,
+		top: "50%",
+		left: "50%",
+		transform: "translate(-50%, -50%) rotate(-90deg)",
+		backgroundColor: "rgba(255, 0, 0, 0.7)",
+		color: "#fff",
+		padding: "5px 10px",
+		fontSize: "12px",
+		fontWeight: "bold" as const,
+		borderRadius: "4px",
+		pointerEvents: "none" as const,
 	},
 	zoneGrid: {
 		display: "grid",
@@ -426,6 +568,7 @@ const styles = {
 		padding: "10px",
 		borderRadius: "4px",
 		fontSize: "12px",
+		border: "1px solid #333",
 	},
 	zoneLabel: {
 		fontSize: "12px",
@@ -434,17 +577,29 @@ const styles = {
 		marginBottom: "5px",
 	},
 	zoneContent: {
-		maxHeight: "100px",
-		overflow: "auto",
+		maxHeight: "120px",
+		overflowY: "auto" as const,
 		fontSize: "11px",
+	},
+	cardItem: {
+		padding: "5px",
+		marginBottom: "4px",
+		backgroundColor: "#2a2a2a",
+		borderRadius: "3px",
+		cursor: "move",
+		userSelect: "none" as const,
+		fontSize: "11px",
+		border: "1px solid #444",
+		transition: "background-color 0.2s",
 	},
 	redactedCount: {
 		color: "#888",
 		fontStyle: "italic" as const,
 	},
-	card: {
-		padding: "3px 0",
-		borderBottom: "1px solid #333",
+	emptyZone: {
+		color: "#555",
+		fontStyle: "italic" as const,
+		padding: "5px",
 	},
 	drawButton: {
 		marginTop: "10px",

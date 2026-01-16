@@ -169,7 +169,7 @@ router.get("/:id", async (req, res) => {
 		// Get all objects
 		const objectsResult = await query(
 			`SELECT go.id, go.seat, go.zone, go.card_id, go.is_tapped, go.is_flipped, 
-              go.counters, go.notes, c.name, c.type_line, c.image_uris
+              go.counters, go.notes, go.position, c.name, c.type_line, c.image_uris
        FROM game_objects go
        LEFT JOIN cards c ON go.card_id = c.id
        WHERE go.game_session_id = $1
@@ -198,6 +198,7 @@ router.get("/:id", async (req, res) => {
 				is_flipped: obj.is_flipped,
 				counters: obj.counters,
 				notes: obj.notes,
+				position: obj.position,
 			};
 		});
 		if (!projectedObjects) {
@@ -293,11 +294,43 @@ router.post("/:id/action", async (req, res) => {
 					[cardId]
 				);
 			}
-		} else if (action_type === "tap" && target_object_id) {
-			await query(
-				`UPDATE game_objects SET is_tapped = true WHERE id = $1`,
-				[target_object_id]
-			);
+		} else if (action_type === "move_to_battlefield") {
+			// metadata.objectId contains the card ID to move
+			// metadata.position contains { x, y } coordinates
+			const objectId = metadata.objectId;
+			const position = metadata.position;
+			if (objectId) {
+				let updateQuery = `UPDATE game_objects SET zone = 'battlefield'`;
+				const params: any[] = [];
+
+				if (position) {
+					updateQuery += `, position = $1`;
+					params.push(
+						JSON.stringify({ x: position.x, y: position.y })
+					);
+				}
+
+				updateQuery += ` WHERE id = $${params.length + 1}`;
+				params.push(objectId);
+
+				await query(updateQuery, params);
+			}
+		} else if (action_type === "tap") {
+			// Toggle tap state
+			const objectId = metadata?.objectId;
+			if (objectId) {
+				const objResult = await query(
+					`SELECT is_tapped FROM game_objects WHERE id = $1`,
+					[objectId]
+				);
+				if (objResult && objResult.rows && objResult.rows.length > 0) {
+					const currentTapped = objResult.rows[0].is_tapped;
+					await query(
+						`UPDATE game_objects SET is_tapped = $1 WHERE id = $2`,
+						[!currentTapped, objectId]
+					);
+				}
+			}
 		} else if (action_type === "untap" && target_object_id) {
 			await query(
 				`UPDATE game_objects SET is_tapped = false WHERE id = $1`,

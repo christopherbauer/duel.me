@@ -204,16 +204,7 @@ async function insertCardBatch(cards: AppCard[]) {
 		card.oracle_text || null,
 		card.mana_cost || null,
 		card.colors || [],
-		JSON.stringify({
-			cmc: card.cmc,
-			power: card.power,
-			toughness: card.toughness,
-			color_identity: card.color_identity,
-			keywords: card.keywords,
-			is_legal_commander: card.is_legal_commander,
-			layout: card.layout,
-			image_uris: card.image_uris,
-		}),
+		JSON.stringify(card.image_uris || {}),
 	]);
 
 	const sql = `
@@ -222,6 +213,7 @@ async function insertCardBatch(cards: AppCard[]) {
     ON CONFLICT (scryfall_id) DO UPDATE
     SET name = EXCLUDED.name,
         type_line = EXCLUDED.type_line,
+        image_uris = EXCLUDED.image_uris,
         updated_at = NOW()
   `;
 
