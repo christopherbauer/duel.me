@@ -179,6 +179,8 @@ router.get("/:id", async (req, res) => {
 			[id]
 		);
 
+		logger.debug(JSON.stringify(objectsResult?.rows));
+
 		// Project visibility: hide opponent's hand and library
 		const projectedObjects = objectsResult?.rows.map((obj) => {
 			const isOpponent = obj.seat !== viewerSeat;
