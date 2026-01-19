@@ -165,7 +165,4 @@ export interface RelatedUris {
 	edhrec: string;
 }
 
-export interface AppCard extends ScryfallCard {
-	scryfall_id: string;
-	is_legal_commander: boolean;
-}
+export interface AppCard extends ScryfallCard {}

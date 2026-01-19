@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { api } from "../api";
-import { useGameStore } from "../store";
+import { Card, useGameStore } from "../store";
 
 export const GameBoard: React.FC = () => {
 	const {
@@ -133,17 +133,21 @@ export const GameBoard: React.FC = () => {
 						onDrop={(e) => {
 							e.preventDefault();
 							const cardId = e.dataTransfer.getData("text/plain");
-							
+
 							if (cardId) {
 								if (dragStart && dragStart.cardId === cardId) {
 									// Dragging an existing battlefield card (delta movement)
-									const deltaX = e.clientX - dragStart.mousePos.x;
-									const deltaY = e.clientY - dragStart.mousePos.y;
-									
+									const deltaX =
+										e.clientX - dragStart.mousePos.x;
+									const deltaY =
+										e.clientY - dragStart.mousePos.y;
+
 									// Apply delta to initial position
-									const newX = dragStart.initialPos.x + deltaX;
-									const newY = dragStart.initialPos.y + deltaY;
-									
+									const newX =
+										dragStart.initialPos.x + deltaX;
+									const newY =
+										dragStart.initialPos.y + deltaY;
+
 									executeAction("move_to_battlefield", {
 										objectId: cardId,
 										position: { x: newX, y: newY },
@@ -183,8 +187,12 @@ export const GameBoard: React.FC = () => {
 										setDragStart({
 											cardId: obj.id,
 											initialPos: {
-												x: obj.position ? obj.position.x : 0,
-												y: obj.position ? obj.position.y : 0,
+												x: obj.position
+													? obj.position.x
+													: 0,
+												y: obj.position
+													? obj.position.y
+													: 0,
 											},
 											mousePos: {
 												x: e.clientX,
@@ -361,7 +369,7 @@ const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 };
 
 interface CardImageProps {
-	card?: any;
+	card?: Card;
 	isTapped?: boolean;
 	onDoubleClick?: () => void;
 }
@@ -395,12 +403,32 @@ const CardImage: React.FC<CardImageProps> = ({
 				/>
 			) : (
 				<div style={styles.cardPlaceholder}>
-					<div style={styles.cardPlaceholderName}>
+					{/* Card Header: Mana Cost (top right) */}
+					<div style={styles.cardCost}>
+						{card ? card.mana_cost : ""}
+					</div>
+
+					{/* Card Name */}
+					<div style={styles.cardName}>
 						{card ? card.name : "Unknown"}
 					</div>
-					<div style={styles.cardPlaceholderType}>
+
+					{/* Card Type Line */}
+					<div style={styles.cardType}>
 						{card ? card.type_line : ""}
 					</div>
+
+					{/* Card Text Body */}
+					<div style={styles.cardText}>
+						{card ? card.oracle_text : ""}
+					</div>
+
+					{/* Power/Toughness (if creature) */}
+					{card && card.power && card.toughness && (
+						<div style={styles.cardPT}>
+							{card.power}/{card.toughness}
+						</div>
+					)}
 				</div>
 			)}
 			{isTapped && <div style={styles.tappedLabel}>TAP</div>}
@@ -523,26 +551,68 @@ const styles = {
 	cardPlaceholder: {
 		width: "100%",
 		aspectRatio: "2/3",
-		backgroundColor: "#222",
+		backgroundColor: "#1a1a1a",
 		border: "2px solid #444",
 		borderRadius: "8px",
-		padding: "10px",
+		padding: "8px",
 		display: "flex",
 		flexDirection: "column" as const,
-		justifyContent: "center",
-		alignItems: "center",
-		textAlign: "center" as const,
-		fontSize: "12px",
+		justifyContent: "flex-start",
+		alignItems: "stretch",
+		textAlign: "left" as const,
+		fontSize: "10px",
 		boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+		position: "relative" as const,
+		overflow: "hidden" as const,
 	},
-	cardPlaceholderName: {
-		fontWeight: "bold" as const,
-		marginBottom: "5px",
-		fontSize: "11px",
-	},
-	cardPlaceholderType: {
+	cardCost: {
+		position: "absolute" as const,
+		top: "4px",
+		right: "4px",
 		fontSize: "9px",
-		color: "#999",
+		fontWeight: "bold" as const,
+		color: "#ffd700",
+		minWidth: "20px",
+		textAlign: "center" as const,
+	},
+	cardName: {
+		fontWeight: "bold" as const,
+		fontSize: "9px",
+		marginBottom: "2px",
+		color: "#fff",
+		lineHeight: "1.2",
+		flex: "0 0 auto",
+	},
+	cardType: {
+		fontSize: "8px",
+		color: "#bbb",
+		marginBottom: "3px",
+		lineHeight: "1.1",
+		flex: "0 0 auto",
+		borderTop: "1px solid #555",
+		borderBottom: "1px solid #555",
+		paddingTop: "2px",
+		paddingBottom: "2px",
+	},
+	cardText: {
+		fontSize: "7px",
+		color: "#ddd",
+		flex: "1 1 auto",
+		overflowY: "auto" as const,
+		marginBottom: "4px",
+		lineHeight: "1.3",
+	},
+	cardPT: {
+		position: "absolute" as const,
+		bottom: "4px",
+		right: "4px",
+		fontSize: "8px",
+		fontWeight: "bold" as const,
+		color: "#fff",
+		backgroundColor: "#000",
+		padding: "2px 4px",
+		borderRadius: "3px",
+		flex: "0 0 auto",
 	},
 	tappedLabel: {
 		position: "absolute" as const,

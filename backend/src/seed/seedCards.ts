@@ -124,16 +124,7 @@ async function downloadAndSeedCards() {
 
 						try {
 							const card: ScryfallCard = JSON.parse(cleanLine);
-
-							// Transform and batch insert
-							batch.push({
-								scryfall_id: card.id,
-								is_legal_commander:
-									!card.legalities ||
-									card.legalities.commander !== "banned",
-								...card,
-							});
-
+							batch.push(card);
 							cardCount++;
 
 							if (batch.length >= batchSize) {
@@ -186,34 +177,102 @@ async function downloadAndSeedCards() {
 	});
 }
 
-async function insertCardBatch(cards: AppCard[]) {
+async function insertCardBatch(cards: ScryfallCard[]) {
 	// Using multi-row insert with ON CONFLICT for upsertion
 	const values = cards
 		.map((card, i) => {
-			const offset = i * 7;
-			return `($${offset + 1}::uuid, $${offset + 2}, $${offset + 3}, $${
+			const offset = i * 39;
+			return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${
 				offset + 4
-			}, $${offset + 5}, $${offset + 6}, $${offset + 7}::jsonb)`;
+			}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${
+				offset + 8
+			}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${
+				offset + 12
+			}, $${offset + 13}, $${offset + 14}, $${offset + 15}, $${
+				offset + 16
+			}::jsonb, $${offset + 17}::jsonb, $${offset + 18}, $${
+				offset + 19
+			}, $${offset + 20}, $${offset + 21}, $${offset + 22}, $${
+				offset + 23
+			}, $${offset + 24}, $${offset + 25}, $${offset + 26}, $${
+				offset + 27
+			}, $${offset + 28}, $${offset + 29}, $${offset + 30}::jsonb, $${
+				offset + 31
+			}::jsonb, $${offset + 32}::jsonb, $${offset + 33}::jsonb, $${
+				offset + 34
+			}::jsonb, $${offset + 35}, $${offset + 36}, $${offset + 37}, $${
+				offset + 38
+			}, $${offset + 39})`;
 		})
 		.join(",");
 
 	const params = cards.flatMap((card) => [
-		card.scryfall_id,
+		card.object,
+		card.id,
+		card.oracle_id,
+		JSON.stringify(card.multiverse_ids || []),
+		card.mtgo_id || null,
+		card.tcgplayer_id || null,
+		card.cardmarket_id || null,
 		card.name,
+		card.lang,
+		card.released_at,
+		card.uri,
+		card.scryfall_uri,
+		card.layout,
+		card.highres_image,
+		card.image_status,
+		JSON.stringify(card.image_uris || {}),
+		JSON.stringify(card.mana_cost || ""),
+		card.cmc || null,
 		card.type_line,
 		card.oracle_text || null,
-		card.mana_cost || null,
-		card.colors || [],
-		JSON.stringify(card.image_uris || {}),
+		card.power || null,
+		card.toughness || null,
+		JSON.stringify(card.colors || []),
+		JSON.stringify(card.color_identity || []),
+		JSON.stringify(card.keywords || []),
+		JSON.stringify(card.all_parts || []),
+		JSON.stringify(card.legalities || {}),
+		JSON.stringify(card.games || []),
+		card.reserved,
+		card.game_changer,
+		JSON.stringify(card.foil),
+		JSON.stringify(card.nonfoil),
+		JSON.stringify(card.finishes || []),
+		card.oversized,
+		card.promo,
+		card.reprint,
+		card.variation,
+		card.set,
+		card.rarity || null,
 	]);
 
 	const sql = `
-    INSERT INTO cards (scryfall_id, name, type_line, oracle_text, mana_cost, colors, image_uris)
+    INSERT INTO cards (
+      object, id, oracle_id, multiverse_ids, mtgo_id, tcgplayer_id, cardmarket_id,
+      name, lang, released_at, uri, scryfall_uri, layout, highres_image,
+      image_status, image_uris, mana_cost, cmc, type_line, oracle_text, power,
+      toughness, colors, color_identity, keywords, all_parts, legalities, games,
+      reserved, game_changer, foil, nonfoil, finishes, oversized, promo, reprint,
+      variation, set, rarity
+    )
     VALUES ${values}
-    ON CONFLICT (scryfall_id) DO UPDATE
-    SET name = EXCLUDED.name,
+    ON CONFLICT (id) DO UPDATE
+    SET oracle_id = EXCLUDED.oracle_id,
+        name = EXCLUDED.name,
         type_line = EXCLUDED.type_line,
+        oracle_text = EXCLUDED.oracle_text,
+        mana_cost = EXCLUDED.mana_cost,
+        cmc = EXCLUDED.cmc,
+        power = EXCLUDED.power,
+        toughness = EXCLUDED.toughness,
+        colors = EXCLUDED.colors,
+        color_identity = EXCLUDED.color_identity,
+        keywords = EXCLUDED.keywords,
         image_uris = EXCLUDED.image_uris,
+        legalities = EXCLUDED.legalities,
+        rarity = EXCLUDED.rarity,
         updated_at = NOW()
   `;
 

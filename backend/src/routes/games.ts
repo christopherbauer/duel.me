@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { query } from "../db/pool";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -9,6 +9,7 @@ import {
 	GameObjectView,
 	Zone,
 } from "../types/game";
+import logger from "../core/logger";
 
 const router = Router();
 
@@ -169,7 +170,8 @@ router.get("/:id", async (req, res) => {
 		// Get all objects
 		const objectsResult = await query(
 			`SELECT go.id, go.seat, go.zone, go.card_id, go.is_tapped, go.is_flipped, 
-              go.counters, go.notes, go.position, c.name, c.type_line, c.image_uris
+			go.counters, go.notes, go.position,
+			c.id as card_id, c."name", c.type_line, c.oracle_text, c.mana_cost, c.cmc, c.power, c.toughness, c.colors, c.color_identity, c.keywords, c.layout, c.image_uris
        FROM game_objects go
        LEFT JOIN cards c ON go.card_id = c.id
        WHERE go.game_session_id = $1
@@ -192,6 +194,16 @@ router.get("/:id", async (req, res) => {
 								id: obj.card_id,
 								name: obj.name,
 								type_line: obj.type_line,
+								oracle_text: obj.oracle_text,
+								mana_cost: obj.mana_cost,
+								cmc: obj.cmc,
+								power: obj.power,
+								toughness: obj.toughness,
+								colors: obj.colors,
+								color_identity: obj.color_identity,
+								keywords: obj.keywords,
+								layout: obj.layout,
+								image_uris: obj.image_uris,
 						  }
 						: null,
 				is_tapped: obj.is_tapped,
@@ -201,6 +213,7 @@ router.get("/:id", async (req, res) => {
 				position: obj.position,
 			};
 		});
+		logger.info(JSON.stringify(projectedObjects));
 		if (!projectedObjects) {
 			return res
 				.status(500)
@@ -254,7 +267,7 @@ router.get("/:id", async (req, res) => {
  *       200:
  *         description: Action executed
  */
-router.post("/:id/action", async (req, res) => {
+router.post("/:id/action", async (req: Request, res: Response) => {
 	const { id } = req.params;
 	const { seat, action_type, target_object_id, metadata = {} } = req.body;
 

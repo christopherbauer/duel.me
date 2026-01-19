@@ -4,8 +4,24 @@ export interface Card {
 	id: string;
 	name: string;
 	type_line: string;
-	mana_cost?: string;
-	colors?: string[];
+	oracle_text: string;
+	mana_cost: string;
+	cmc: number;
+	power: string;
+	toughness: string;
+	colors: string[];
+	color_identity: string[];
+	keywords: string[];
+	layout: string;
+	image_uris: ImageUris;
+}
+export interface ImageUris {
+	png: string;
+	large: string;
+	small: string;
+	normal: string;
+	art_crop: string;
+	border_crop: string;
 }
 
 export interface GameState {

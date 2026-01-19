@@ -36,6 +36,9 @@ dev:
 seed:
 	docker exec -it duelme_backend sh -c "NODE_OPTIONS='--max-old-space-size=3072' npm run seed"
 
+migrate:
+	docker exec -it duelme_backend npm run migrate
+
 stop:
 	docker compose stop
 

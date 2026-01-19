@@ -1,6 +1,5 @@
 export interface Card {
 	id: string;
-	scryfall_id: string;
 	name: string;
 	type_line: string;
 	oracle_text?: string;
@@ -11,9 +10,7 @@ export interface Card {
 	colors?: string[];
 	color_identity?: string[];
 	keywords?: string[];
-	is_legal_commander: boolean;
 	layout: string;
-	faces?: CardFace[];
 	image_uris?: Record<string, string>;
 	imported_at: string;
 	updated_at: string;
