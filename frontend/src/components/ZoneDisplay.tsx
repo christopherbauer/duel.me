@@ -112,6 +112,9 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 							style={{
 								...zoneStyles.libraryCardBack,
 								cursor: "pointer",
+								backgroundImage: "url(/Magic_card_back.png)",
+								backgroundSize: "cover",
+								backgroundPosition: "center",
 							}}
 							onContextMenu={(e) => {
 								e.preventDefault();
@@ -119,7 +122,6 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 							}}
 							onClick={onCountClick}
 						>
-							<div style={zoneStyles.cardBackPattern} />
 							<div style={zoneStyles.libraryCardLabel}>
 								{count} cards
 							</div>
@@ -174,7 +176,9 @@ export const zoneStyles = {
 		marginBottom: "3px",
 	},
 	zoneContent: {
-		maxHeight: "80px",
+		flex: 1,
+		display: "flex" as const,
+		flexDirection: "column" as const,
 		overflowY: "auto" as const,
 		fontSize: "9px",
 	},
@@ -207,9 +211,9 @@ export const zoneStyles = {
 		padding: "5px",
 	},
 	libraryCardBack: {
-		width: "60px",
-		height: "85px",
-		backgroundColor: "#1a3a52",
+		width: "100%",
+		aspectRatio: "60 / 85",
+		maxWidth: "80px",
 		border: "2px solid #0d1f2d",
 		borderRadius: "4px",
 		display: "flex" as const,
@@ -223,19 +227,8 @@ export const zoneStyles = {
 		boxShadow:
 			"inset 0 1px 3px rgba(255,255,255,0.1), 0 4px 6px rgba(0,0,0,0.3)",
 	},
-	cardBackPattern: {
-		position: "absolute" as const,
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		backgroundImage:
-			"repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px)",
-		zIndex: 1,
-	},
 	libraryCardLabel: {
 		position: "relative" as const,
-		zIndex: 2,
 		fontSize: "8px" as const,
 		fontWeight: "bold" as const,
 		color: "#fff",
