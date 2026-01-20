@@ -9,7 +9,7 @@ pool.on("error", (err: Error) => {
 	console.error("Unexpected error on idle client", err);
 });
 
-export async function query(text: string, params?: any[]) {
+export async function query<T>(text: string, params?: any[]) {
 	const start = Date.now();
 	try {
 		const res = await pool.query(text, params);
@@ -19,9 +19,9 @@ export async function query(text: string, params?: any[]) {
 				text,
 				duration,
 				rows: res.rowCount,
-			})}`
+			})}`,
 		);
-		return res;
+		return res as { rows: T[]; rowCount: number };
 	} catch (error) {
 		logger.info(`Database query error`);
 		logger.catchError(error);

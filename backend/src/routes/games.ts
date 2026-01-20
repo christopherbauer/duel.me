@@ -3,13 +3,14 @@ import { query } from "../db/pool";
 import { v4 as uuidv4 } from "uuid";
 import {
 	GameSession,
-	GameObject,
 	GameState,
 	GameStateView,
-	GameObjectView,
-	Zone,
+	DeckCards,
+	CommanderIds,
+	GameStateQueryResult,
 } from "../types/game";
 import logger from "../core/logger";
+import { handleGameAction } from "./gameActions";
 
 const router = Router();
 
@@ -24,7 +25,7 @@ const router = Router();
  */
 router.get("/", async (req, res) => {
 	try {
-		const result = await query(
+		const result = await query<GameSession>(
 			`SELECT * FROM game_sessions WHERE status != 'completed' ORDER BY updated_at DESC`,
 		);
 		res.json(result?.rows);
@@ -89,7 +90,7 @@ router.post("/", async (req, res) => {
 		// Load decks into library zones
 		for (const seat of [1, 2]) {
 			const deckId = seat === 1 ? deck1_id : deck2_id;
-			const deckCardsResult = await query(
+			const deckCardsResult = await query<DeckCards>(
 				`SELECT dc.card_id, dc.quantity FROM deck_cards dc WHERE dc.deck_id = $1 AND dc.zone = 'library'`,
 				[deckId],
 			);
@@ -107,7 +108,7 @@ router.post("/", async (req, res) => {
 			}
 
 			// Load commanders
-			const deckResult = await query(
+			const deckResult = await query<CommanderIds>(
 				`SELECT commander_ids FROM decks WHERE id = $1`,
 				[deckId],
 			);
@@ -160,7 +161,7 @@ router.get("/:id", async (req, res) => {
 
 	try {
 		// Get game state
-		const stateResult = await query(
+		const stateResult = await query<GameState>(
 			"SELECT * FROM game_state WHERE game_session_id = $1",
 			[id],
 		);
@@ -168,10 +169,13 @@ router.get("/:id", async (req, res) => {
 			return res.status(404).json({ error: "Game not found" });
 		}
 		const gameState = stateResult?.rows[0];
+		if (!gameState) {
+			throw new Error("Failed to retrieve game state");
+		}
 
 		// Get all objects
-		const objectsResult = await query(
-			`SELECT go.id, go.seat, go.zone, go.card_id, go.is_tapped, go.is_flipped, 
+		const objectsResult = await query<GameStateQueryResult>(
+			`SELECT go.id, go.seat, go.zone, go.card_id, go.is_token, go.is_tapped, go.is_flipped, 
 			go.counters, go.notes, go.position, go."order",
 			c.id as card_id, c."name", c.type_line, c.oracle_text, c.mana_cost, c.cmc, c.power, c.toughness, c.colors, c.color_identity, c.keywords, c.layout, c.image_uris
        FROM game_objects go
@@ -210,6 +214,7 @@ router.get("/:id", async (req, res) => {
 								image_uris: obj.image_uris,
 							}
 						: null,
+				is_token: obj.is_token,
 				is_tapped: obj.is_tapped,
 				is_flipped: obj.is_flipped,
 				counters: obj.counters,
@@ -298,259 +303,7 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 			],
 		);
 
-		// Handle specific actions
-		if (action_type === "draw") {
-			const count = metadata.count || 1;
-			const drawResult = await query(
-				`SELECT id FROM game_objects 
-				 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
-				 ORDER BY "order", id
-				 LIMIT $3`,
-				[id, seat, count],
-			);
-			if (drawResult && drawResult.rows) {
-				for (const row of drawResult.rows) {
-					await query(
-						`UPDATE game_objects SET zone = 'hand' WHERE id = $1`,
-						[row.id],
-					);
-				}
-			}
-		} else if (action_type === "shuffle_library") {
-			// Shuffle library by reassigning order values
-			const libraryCardsResult = await query(
-				`SELECT id FROM game_objects 
-				 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
-				 ORDER BY "order", id`,
-				[id, seat],
-			);
-
-			if (libraryCardsResult && libraryCardsResult.rows) {
-				// Create an array of card IDs and shuffle them
-				const cardIds = libraryCardsResult.rows.map(
-					(row: any) => row.id,
-				);
-
-				// Fisher-Yates shuffle algorithm
-				for (let i = cardIds.length - 1; i > 0; i--) {
-					const j = Math.floor(Math.random() * (i + 1));
-					[cardIds[i], cardIds[j]] = [cardIds[j], cardIds[i]];
-				}
-
-				// Update library order by setting the order field
-				for (let index = 0; index < cardIds.length; index++) {
-					await query(
-						`UPDATE game_objects SET "order" = $1 WHERE id = $2`,
-						[index, cardIds[index]],
-					);
-				}
-			}
-			logger.info(`Library shuffled by seat ${seat} in game ${id}`);
-		} else if (action_type === "scry") {
-			// Scry: arrange top X cards, unplaced go to bottom
-			const { count, arrangement } = metadata;
-			if (arrangement && count) {
-				const { top, bottom } = arrangement;
-
-				// Get all library cards currently
-				const allCardsResult = await query(
-					`SELECT id FROM game_objects
-					 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
-					 ORDER BY "order", id`,
-					[id, seat],
-				);
-
-				if (allCardsResult && allCardsResult.rows) {
-					const allCardIds = allCardsResult.rows.map(
-						(row: any) => row.id,
-					);
-
-					// Cards not in scry arrangement are the ones below the scried cards
-					const scryCardIds = new Set([...top, ...bottom]);
-					const remainingCards = allCardIds.filter(
-						(cardId: string) => !scryCardIds.has(cardId),
-					);
-
-					// Rebuild the entire library order:
-					// top cards first, then remaining cards, then bottom cards last
-					const newOrder = [...top, ...remainingCards, ...bottom];
-
-					// Update all cards with new order values
-					for (let i = 0; i < newOrder.length; i++) {
-						await query(
-							`UPDATE game_objects SET "order" = $1 WHERE id = $2`,
-							[i, newOrder[i]],
-						);
-					}
-				}
-			}
-			logger.info(`Scry ${count} by seat ${seat} in game ${id}`);
-		} else if (action_type === "surveil") {
-			// Surveil: arrange cards, putting some to graveyard
-			const { count, arrangement } = metadata;
-			if (arrangement) {
-				const { top, graveyard } = arrangement;
-
-				// Get all library cards currently
-				const allCardsResult = await query(
-					`SELECT id FROM game_objects
-					 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
-					 ORDER BY "order", id`,
-					[id, seat],
-				);
-
-				if (allCardsResult && allCardsResult.rows) {
-					const allCardIds = allCardsResult.rows.map(
-						(row: any) => row.id,
-					);
-
-					// Cards not in surveil arrangement are the ones below the surveiled cards
-					const surveilCardIds = new Set([
-						...top,
-						...(graveyard || []),
-					]);
-					const remainingCards = allCardIds.filter(
-						(cardId: string) => !surveilCardIds.has(cardId),
-					);
-
-					// Update remaining library cards with sequential order
-					for (let i = 0; i < top.length; i++) {
-						await query(
-							`UPDATE game_objects SET "order" = $1 WHERE id = $2`,
-							[i, top[i]],
-						);
-					}
-					for (let i = 0; i < remainingCards.length; i++) {
-						await query(
-							`UPDATE game_objects SET "order" = $1 WHERE id = $2`,
-							[top.length + i, remainingCards[i]],
-						);
-					}
-
-					// Move cards to graveyard
-					for (const cardId of graveyard) {
-						await query(
-							`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`,
-							[cardId],
-						);
-					}
-				}
-			}
-			logger.info(`Surveil ${count} by seat ${seat} in game ${id}`);
-		} else if (action_type === "exile_from_top") {
-			// Exile X cards from top of library
-			const count = metadata.count || 1;
-			const exileResult = await query(
-				`SELECT id FROM game_objects 
-				 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
-				 ORDER BY "order", id
-				 LIMIT $3`,
-				[id, seat, count],
-			);
-			if (exileResult && exileResult.rows) {
-				for (const row of exileResult.rows) {
-					await query(
-						`UPDATE game_objects SET zone = 'exile' WHERE id = $1`,
-						[row.id],
-					);
-				}
-			}
-			logger.info(`Exiled ${count} cards from library by seat ${seat}`);
-		} else if (action_type === "exile_from_zone") {
-			const count = metadata.count || 1;
-			// Move card from any zone to exile
-			const objectId = metadata.objectId;
-			if (objectId) {
-				await query(
-					`UPDATE game_objects SET zone = 'exile' WHERE id = $1`,
-					[objectId],
-				);
-			}
-			logger.info(`Exiled ${count} cards from library by seat ${seat}`);
-		} else if (action_type === "return_to_hand") {
-			// Move card back to hand from graveyard or exile
-			const objectId = metadata.objectId;
-			if (objectId) {
-				await query(
-					`UPDATE game_objects SET zone = 'hand' WHERE id = $1`,
-					[objectId],
-				);
-			}
-		} else if (action_type === "return_to_library") {
-			// Move card back to library from graveyard
-			const objectId = metadata.objectId;
-			if (objectId) {
-				await query(
-					`UPDATE game_objects SET zone = 'library' WHERE id = $1`,
-					[objectId],
-				);
-			}
-		} else if (action_type === "cast") {
-			// Move card from hand to battlefield
-			const objectId = metadata.objectId;
-			if (objectId) {
-				await query(
-					`UPDATE game_objects SET zone = 'battlefield' WHERE id = $1`,
-					[objectId],
-				);
-			}
-		} else if (action_type === "move_to_battlefield") {
-			// metadata.objectId contains the card ID to move
-			// metadata.position contains { x, y } coordinates
-			const objectId = metadata.objectId;
-			const position = metadata.position;
-			if (objectId) {
-				let updateQuery = `UPDATE game_objects SET zone = 'battlefield'`;
-				const params: any[] = [];
-
-				if (position) {
-					updateQuery += `, position = $1`;
-					params.push(
-						JSON.stringify({ x: position.x, y: position.y }),
-					);
-				}
-
-				updateQuery += ` WHERE id = $${params.length + 1}`;
-				params.push(objectId);
-
-				await query(updateQuery, params);
-			}
-		} else if (action_type === "tap") {
-			// Toggle tap state
-			const objectId = metadata?.objectId;
-			if (objectId) {
-				const objResult = await query(
-					`SELECT is_tapped FROM game_objects WHERE id = $1`,
-					[objectId],
-				);
-				if (objResult && objResult.rows && objResult.rows.length > 0) {
-					const currentTapped = objResult.rows[0].is_tapped;
-					await query(
-						`UPDATE game_objects SET is_tapped = $1 WHERE id = $2`,
-						[!currentTapped, objectId],
-					);
-				}
-			}
-		} else if (action_type === "untap" && target_object_id) {
-			await query(
-				`UPDATE game_objects SET is_tapped = false WHERE id = $1`,
-				[target_object_id],
-			);
-		} else if (action_type === "life_change") {
-			const { amount } = metadata;
-			if (amount && typeof amount === "number") {
-				const column = seat === 1 ? "seat1_life" : "seat2_life";
-				await query(
-					`UPDATE game_state SET ${column} = ${column} + $1 WHERE game_session_id = $2`,
-					[amount, id],
-				);
-			}
-		}
-
-		await query(
-			`UPDATE game_sessions SET updated_at = NOW() WHERE id = $1`,
-			[id],
-		);
+		await handleGameAction(action_type, id, seat, metadata);
 
 		res.json({ success: true, action_id: actionId });
 	} catch (error) {

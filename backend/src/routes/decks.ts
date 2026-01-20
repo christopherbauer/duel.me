@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { query } from "../db/pool";
 import { v4 as uuidv4 } from "uuid";
-import { Deck } from "../types/game";
+import { Card, CardId, Deck, DeckCard, DeckDetails } from "../types/game";
 
 const router = Router();
 
@@ -16,7 +16,7 @@ const router = Router();
  */
 router.get("/", async (req, res) => {
 	try {
-		const result = await query(
+		const result = await query<Deck>(
 			"SELECT * FROM decks ORDER BY updated_at DESC",
 		);
 		res.json(result?.rows);
@@ -73,7 +73,7 @@ router.post("/", async (req, res) => {
 		// Parse commander IDs
 		const commanderIds: string[] = [];
 		for (const cmdName of commanderCardNames) {
-			const cardResult = await query(
+			const cardResult = await query<CardId>(
 				"SELECT id FROM cards WHERE name ILIKE $1 LIMIT 1",
 				[cmdName],
 			);
@@ -100,7 +100,7 @@ router.post("/", async (req, res) => {
 				const quantity = parseInt(match[1]);
 				const cardName = match[2].trim();
 
-				const cardResult = await query(
+				const cardResult = await query<CardId>(
 					"SELECT id FROM cards WHERE name ILIKE $1 LIMIT 1",
 					[cardName],
 				);
@@ -144,14 +144,15 @@ router.get("/:id", async (req, res) => {
 	const { id } = req.params;
 
 	try {
-		const deckResult = await query("SELECT * FROM decks WHERE id = $1", [
-			id,
-		]);
+		const deckResult = await query<Deck>(
+			"SELECT * FROM decks WHERE id = $1",
+			[id],
+		);
 		if (deckResult && deckResult.rows && deckResult.rows.length === 0) {
 			return res.status(404).json({ error: "Deck not found" });
 		}
 
-		const cardsResult = await query(
+		const cardsResult = await query<DeckDetails>(
 			`SELECT dc.quantity, dc.zone, c.id, c.name, c.type_line, c.mana_cost, c.colors, c.image_uris
        FROM deck_cards dc
        JOIN cards c ON dc.card_id = c.id
@@ -228,7 +229,7 @@ router.put("/:id", async (req, res) => {
 		// Parse commander IDs
 		const commanderIds: string[] = [];
 		for (const cmdName of commanderCardNames) {
-			const cardResult = await query(
+			const cardResult = await query<CardId>(
 				"SELECT id FROM cards WHERE name ILIKE $1 LIMIT 1",
 				[cmdName],
 			);
@@ -258,7 +259,7 @@ router.put("/:id", async (req, res) => {
 				const quantity = parseInt(match[1]);
 				const cardName = match[2].trim();
 
-				const cardResult = await query(
+				const cardResult = await query<CardId>(
 					"SELECT id FROM cards WHERE name ILIKE $1 LIMIT 1",
 					[cardName],
 				);
@@ -302,9 +303,10 @@ router.delete("/:id", async (req, res) => {
 
 	try {
 		// Check if deck exists
-		const deckCheck = await query("SELECT * FROM decks WHERE id = $1", [
-			id,
-		]);
+		const deckCheck = await query<Deck>(
+			"SELECT * FROM decks WHERE id = $1",
+			[id],
+		);
 		if (!deckCheck || deckCheck.rows.length === 0) {
 			return res.status(404).json({ error: "Deck not found" });
 		}
