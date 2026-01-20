@@ -438,15 +438,6 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 			}
 			logger.info(`Surveil ${count} by seat ${seat} in game ${id}`);
 		} else if (action_type === "exile_from_top") {
-			// Move card from hand to graveyard
-			const objectId = metadata.objectId;
-			if (objectId) {
-				await query(
-					`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`,
-					[objectId],
-				);
-			}
-		} else if (action_type === "exile_from_zone") {
 			// Exile X cards from top of library
 			const count = metadata.count || 1;
 			const exileResult = await query(
@@ -463,6 +454,17 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 						[row.id],
 					);
 				}
+			}
+			logger.info(`Exiled ${count} cards from library by seat ${seat}`);
+		} else if (action_type === "exile_from_zone") {
+			const count = metadata.count || 1;
+			// Move card from any zone to exile
+			const objectId = metadata.objectId;
+			if (objectId) {
+				await query(
+					`UPDATE game_objects SET zone = 'exile' WHERE id = $1`,
+					[objectId],
+				);
 			}
 			logger.info(`Exiled ${count} cards from library by seat ${seat}`);
 		} else if (action_type === "return_to_hand") {
