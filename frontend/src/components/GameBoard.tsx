@@ -26,6 +26,10 @@ export const GameBoard: React.FC = () => {
 		type: "library" | "card";
 		objectId?: string;
 	} | null>(null);
+	const [hoveredOpponentCard, setHoveredOpponentCard] = useState<
+		string | null
+	>(null);
+	const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
 	const battlefieldRef = useRef<HTMLDivElement>(null);
 	const flippedSeatsRef = useRef<Set<number>>(new Set());
 
@@ -365,6 +369,21 @@ export const GameBoard: React.FC = () => {
 										<div
 											key={obj.id}
 											style={styles.opponentPreviewCard}
+											onMouseEnter={(e) => {
+												const rect = (
+													e.currentTarget as HTMLElement
+												).getBoundingClientRect();
+												setHoveredOpponentCard(obj.id);
+												setHoverPos({
+													x:
+														rect.left +
+														rect.width / 2,
+													y: rect.top - 10,
+												});
+											}}
+											onMouseLeave={() =>
+												setHoveredOpponentCard(null)
+											}
 										>
 											<CardImage
 												card={obj.card}
@@ -469,6 +488,31 @@ export const GameBoard: React.FC = () => {
 								</div>
 							))}
 					</div>
+
+					{/* Opponent card hover preview popup */}
+					{hoveredOpponentCard &&
+						(() => {
+							const hoveredCard = opponentObjects.find(
+								(o) => o.id === hoveredOpponentCard,
+							);
+							return (
+								hoveredCard && (
+									<div
+										style={{
+											...styles.cardPreviewPopup,
+											left: `${hoverPos.x}px`,
+											top: `${hoverPos.y}px`,
+										}}
+									>
+										<CardImage
+											card={hoveredCard.card}
+											isTapped={hoveredCard.is_tapped}
+											scale={2}
+										/>
+									</div>
+								)
+							);
+						})()}
 				</div>
 
 				{/* Player Section (20%) */}
@@ -1201,5 +1245,16 @@ const styles = {
 		padding: "20px",
 		textAlign: "center" as const,
 		color: "#aaa",
+	},
+	cardPreviewPopup: {
+		position: "fixed" as const,
+		backgroundColor: "rgba(0, 0, 0, 0.95)",
+		border: "2px solid #555",
+		borderRadius: "8px",
+		padding: "8px",
+		zIndex: 2001,
+		boxShadow: "0 8px 16px rgba(0, 0, 0, 0.8)",
+		pointerEvents: "none" as const,
+		transform: "translate(0%, 20%)",
 	},
 };
