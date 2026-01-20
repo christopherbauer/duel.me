@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api";
 import { Card, useGameStore } from "../store";
+import ContextMenu from "./ContextMenus";
 
 export const GameBoard: React.FC = () => {
 	const { gameId } = useParams<{ gameId: string }>();
@@ -23,7 +24,7 @@ export const GameBoard: React.FC = () => {
 	const [contextMenu, setContextMenu] = useState<{
 		x: number;
 		y: number;
-		type: "library" | "card";
+		type: "library" | "hand" | "graveyard" | "exile" | "battlefield";
 		objectId?: string;
 	} | null>(null);
 	const [hoveredOpponentCard, setHoveredOpponentCard] = useState<
@@ -403,14 +404,6 @@ export const GameBoard: React.FC = () => {
 							const cardId = e.dataTransfer.getData("text/plain");
 							if (cardId) handleCardDropOnBattlefield(e, cardId);
 						}}
-						onContextMenu={(e) => {
-							e.preventDefault();
-							setContextMenu({
-								x: e.clientX,
-								y: e.clientY,
-								type: "library",
-							});
-						}}
 					>
 						{gameState.objects
 							.filter(
@@ -458,7 +451,7 @@ export const GameBoard: React.FC = () => {
 										setContextMenu({
 											x: e.clientX,
 											y: e.clientY,
-											type: "card",
+											type: "battlefield",
 											objectId: obj.id,
 										});
 									}}
@@ -569,6 +562,14 @@ export const GameBoard: React.FC = () => {
 											(o) => o.zone === zone,
 										),
 									)}
+									onContextMenu={(e, objectId) =>
+										setContextMenu({
+											x: e.clientX,
+											y: e.clientY,
+											type: zone as any,
+											objectId,
+										})
+									}
 								/>
 							),
 						)}
@@ -630,6 +631,7 @@ interface ZoneDisplayProps {
 		lands: number;
 		other: number;
 	};
+	onContextMenu?: (e: React.MouseEvent, objectId?: string) => void;
 }
 
 const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
@@ -641,6 +643,7 @@ const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 	onCountClick,
 	showBreakdown,
 	typeBreakdown,
+	onContextMenu,
 }) => {
 	const count = objects.length;
 
@@ -651,6 +654,10 @@ const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 				<span
 					onClick={onCountClick}
 					style={{ cursor: "pointer", fontWeight: "bold" }}
+					onContextMenu={(e) => {
+						e.preventDefault();
+						if (onContextMenu) onContextMenu(e);
+					}}
 				>
 					({count})
 				</span>
@@ -689,6 +696,10 @@ const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 								e.dataTransfer.setData("text/plain", obj.id);
 								if (onCardDragStart) onCardDragStart(obj.id);
 							}}
+							onContextMenu={(e) => {
+								e.preventDefault();
+								if (onContextMenu) onContextMenu(e, obj.id);
+							}}
 							style={styles.cardItem}
 						>
 							{obj.card ? obj.card.name : "Unknown"}
@@ -701,7 +712,7 @@ const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 };
 
 interface CardImageProps {
-	card?: Card;
+	card?: Card | null | undefined;
 	isTapped?: boolean;
 	scale?: number;
 }
@@ -759,81 +770,6 @@ const CardImage: React.FC<CardImageProps> = ({ card, isTapped, scale = 1 }) => {
 				</div>
 			)}
 			{isTapped && <div style={styles.tappedLabel}>TAP</div>}
-		</div>
-	);
-};
-
-interface ContextMenuProps {
-	x: number;
-	y: number;
-	type: "library" | "card";
-	objectId?: string;
-	onClose: () => void;
-	executeAction: (action: string, metadata?: any) => void;
-}
-
-const ContextMenu: React.FC<ContextMenuProps> = ({
-	x,
-	y,
-	type,
-	objectId,
-	onClose,
-	executeAction,
-}) => {
-	useEffect(() => {
-		const handleClickOutside = () => onClose();
-		window.addEventListener("click", handleClickOutside);
-		return () => window.removeEventListener("click", handleClickOutside);
-	}, [onClose]);
-
-	const menuItems =
-		type === "library"
-			? [
-					{ label: "Shuffle Library", action: "shuffle_library" },
-					{ label: "Draw 1", action: "draw", metadata: { count: 1 } },
-					{ label: "Draw 2", action: "draw", metadata: { count: 2 } },
-					{ label: "Scry 1", action: "scry", metadata: { count: 1 } },
-					{
-						label: "Exile 1",
-						action: "exile",
-						metadata: { count: 1 },
-					},
-				]
-			: [
-					{ label: "Tap", action: "tap", metadata: { objectId } },
-					{
-						label: "Face Down",
-						action: "face_down",
-						metadata: { objectId },
-					},
-					{
-						label: "Destroy",
-						action: "destroy",
-						metadata: { objectId },
-					},
-					{ label: "Exile", action: "exile", metadata: { objectId } },
-				];
-
-	return (
-		<div
-			style={{
-				...styles.contextMenu,
-				left: `${x}px`,
-				top: `${y}px`,
-			}}
-		>
-			{menuItems.map((item) => (
-				<div
-					key={item.label}
-					style={styles.contextMenuItem}
-					onClick={() => {
-						executeAction(item.action, item.metadata);
-						onClose();
-					}}
-				>
-					{item.label}
-				</div>
-			))}
 		</div>
 	);
 };
@@ -1218,21 +1154,6 @@ const styles = {
 		cursor: "pointer",
 		fontSize: "12px",
 		fontWeight: "bold" as const,
-	},
-	contextMenu: {
-		position: "fixed" as const,
-		backgroundColor: "#2a2a2a",
-		border: "1px solid #555",
-		borderRadius: "4px",
-		zIndex: 2000,
-		minWidth: "150px",
-	},
-	contextMenuItem: {
-		padding: "8px 12px",
-		cursor: "pointer",
-		borderBottom: "1px solid #444",
-		fontSize: "12px",
-		transition: "background-color 0.2s",
 	},
 	turnInfo: {
 		marginTop: "8px",

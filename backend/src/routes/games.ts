@@ -25,7 +25,7 @@ const router = Router();
 router.get("/", async (req, res) => {
 	try {
 		const result = await query(
-			`SELECT * FROM game_sessions WHERE status != 'completed' ORDER BY updated_at DESC`
+			`SELECT * FROM game_sessions WHERE status != 'completed' ORDER BY updated_at DESC`,
 		);
 		res.json(result?.rows);
 	} catch (error) {
@@ -76,14 +76,14 @@ router.post("/", async (req, res) => {
 				name || `Game ${new Date().toLocaleString()}`,
 				deck1_id,
 				deck2_id,
-			]
+			],
 		);
 
 		// Initialize game state
 		await query(
 			`INSERT INTO game_state (game_session_id, seat1_life, seat2_life, active_seat, turn_number)
        VALUES ($1, 40, 40, 1, 1)`,
-			[gameId]
+			[gameId],
 		);
 
 		// Load decks into library zones
@@ -91,7 +91,7 @@ router.post("/", async (req, res) => {
 			const deckId = seat === 1 ? deck1_id : deck2_id;
 			const deckCardsResult = await query(
 				`SELECT dc.card_id, dc.quantity FROM deck_cards dc WHERE dc.deck_id = $1 AND dc.zone = 'library'`,
-				[deckId]
+				[deckId],
 			);
 			if (!deckCardsResult) continue;
 			for (const row of deckCardsResult.rows) {
@@ -99,7 +99,7 @@ router.post("/", async (req, res) => {
 					await query(
 						`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id)
              VALUES ($1, $2, $3, 'library', $4)`,
-						[uuidv4(), gameId, seat, row.card_id]
+						[uuidv4(), gameId, seat, row.card_id],
 					);
 				}
 			}
@@ -107,7 +107,7 @@ router.post("/", async (req, res) => {
 			// Load commanders
 			const deckResult = await query(
 				`SELECT commander_ids FROM decks WHERE id = $1`,
-				[deckId]
+				[deckId],
 			);
 			if (!deckResult) continue;
 			if (
@@ -118,7 +118,7 @@ router.post("/", async (req, res) => {
 					await query(
 						`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id)
              VALUES ($1, $2, $3, 'command_zone', $4)`,
-						[uuidv4(), gameId, seat, cmdId]
+						[uuidv4(), gameId, seat, cmdId],
 					);
 				}
 			}
@@ -160,7 +160,7 @@ router.get("/:id", async (req, res) => {
 		// Get game state
 		const stateResult = await query(
 			"SELECT * FROM game_state WHERE game_session_id = $1",
-			[id]
+			[id],
 		);
 		if (stateResult && stateResult.rows && stateResult.rows.length === 0) {
 			return res.status(404).json({ error: "Game not found" });
@@ -176,7 +176,7 @@ router.get("/:id", async (req, res) => {
        LEFT JOIN cards c ON go.card_id = c.id
        WHERE go.game_session_id = $1
        ORDER BY go.zone, go.created_at`,
-			[id]
+			[id],
 		);
 
 		logger.debug(JSON.stringify(objectsResult?.rows));
@@ -206,7 +206,7 @@ router.get("/:id", async (req, res) => {
 								keywords: obj.keywords,
 								layout: obj.layout,
 								image_uris: obj.image_uris,
-						  }
+							}
 						: null,
 				is_tapped: obj.is_tapped,
 				is_flipped: obj.is_flipped,
@@ -293,20 +293,70 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 				action_type,
 				target_object_id || null,
 				JSON.stringify(metadata),
-			]
+			],
 		);
 
 		// Handle specific actions
 		if (action_type === "draw") {
+			const count = metadata.count || 1;
 			const drawResult = await query(
-				`SELECT id FROM game_objects WHERE game_session_id = $1 AND seat = $2 AND zone = 'library' LIMIT 1`,
-				[id, seat]
+				`SELECT id FROM game_objects WHERE game_session_id = $1 AND seat = $2 AND zone = 'library' LIMIT $3`,
+				[id, seat, count],
 			);
-			if (drawResult && drawResult.rows && drawResult.rows.length > 0) {
-				const cardId = drawResult.rows[0].id;
+			if (drawResult && drawResult.rows) {
+				for (const row of drawResult.rows) {
+					await query(
+						`UPDATE game_objects SET zone = 'hand' WHERE id = $1`,
+						[row.id],
+					);
+				}
+			}
+		} else if (action_type === "shuffle_library") {
+			// Shuffling is handled on client side, just log the action
+			logger.info(`Library shuffled by seat ${seat} in game ${id}`);
+		} else if (action_type === "discard") {
+			// Move card from hand to graveyard
+			const objectId = metadata.objectId;
+			if (objectId) {
+				await query(
+					`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`,
+					[objectId],
+				);
+			}
+		} else if (action_type === "exile_from_zone") {
+			// Move card from its current zone to exile
+			const objectId = metadata.objectId;
+			if (objectId) {
+				await query(
+					`UPDATE game_objects SET zone = 'exile' WHERE id = $1`,
+					[objectId],
+				);
+			}
+		} else if (action_type === "return_to_hand") {
+			// Move card back to hand from graveyard or exile
+			const objectId = metadata.objectId;
+			if (objectId) {
 				await query(
 					`UPDATE game_objects SET zone = 'hand' WHERE id = $1`,
-					[cardId]
+					[objectId],
+				);
+			}
+		} else if (action_type === "return_to_library") {
+			// Move card back to library from graveyard
+			const objectId = metadata.objectId;
+			if (objectId) {
+				await query(
+					`UPDATE game_objects SET zone = 'library' WHERE id = $1`,
+					[objectId],
+				);
+			}
+		} else if (action_type === "cast") {
+			// Move card from hand to battlefield
+			const objectId = metadata.objectId;
+			if (objectId) {
+				await query(
+					`UPDATE game_objects SET zone = 'battlefield' WHERE id = $1`,
+					[objectId],
 				);
 			}
 		} else if (action_type === "move_to_battlefield") {
@@ -321,7 +371,7 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 				if (position) {
 					updateQuery += `, position = $1`;
 					params.push(
-						JSON.stringify({ x: position.x, y: position.y })
+						JSON.stringify({ x: position.x, y: position.y }),
 					);
 				}
 
@@ -336,20 +386,20 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 			if (objectId) {
 				const objResult = await query(
 					`SELECT is_tapped FROM game_objects WHERE id = $1`,
-					[objectId]
+					[objectId],
 				);
 				if (objResult && objResult.rows && objResult.rows.length > 0) {
 					const currentTapped = objResult.rows[0].is_tapped;
 					await query(
 						`UPDATE game_objects SET is_tapped = $1 WHERE id = $2`,
-						[!currentTapped, objectId]
+						[!currentTapped, objectId],
 					);
 				}
 			}
 		} else if (action_type === "untap" && target_object_id) {
 			await query(
 				`UPDATE game_objects SET is_tapped = false WHERE id = $1`,
-				[target_object_id]
+				[target_object_id],
 			);
 		} else if (action_type === "life_change") {
 			const { amount } = metadata;
@@ -357,14 +407,14 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 				const column = seat === 1 ? "seat1_life" : "seat2_life";
 				await query(
 					`UPDATE game_state SET ${column} = ${column} + $1 WHERE game_session_id = $2`,
-					[amount, id]
+					[amount, id],
 				);
 			}
 		}
 
 		await query(
 			`UPDATE game_sessions SET updated_at = NOW() WHERE id = $1`,
-			[id]
+			[id],
 		);
 
 		res.json({ success: true, action_id: actionId });
