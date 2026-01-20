@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 enum ContextMenuType {
 	Library = "library",
@@ -43,11 +43,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 }) => {
 	const [hoveredSubmenu, setHoveredSubmenu] = useState<string | null>(null);
 	const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+	const submenuTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
 	useEffect(() => {
 		const handleClickOutside = () => onClose();
 		window.addEventListener("click", handleClickOutside);
-		return () => window.removeEventListener("click", handleClickOutside);
+		return () => {
+			window.removeEventListener("click", handleClickOutside);
+			if (submenuTimeoutRef.current) {
+				clearTimeout(submenuTimeoutRef.current);
+			}
+		};
 	}, [onClose]);
 
 	const menuItems = useMemo(() => {
@@ -61,6 +67,24 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 		}
 	};
 
+	const handleMouseEnter = (label: string, hasSubmenu: boolean) => {
+		if (submenuTimeoutRef.current) {
+			clearTimeout(submenuTimeoutRef.current);
+			submenuTimeoutRef.current = null;
+		}
+		setHoveredItem(label);
+		if (hasSubmenu) {
+			setHoveredSubmenu(label);
+		}
+	};
+
+	const handleMouseLeave = () => {
+		submenuTimeoutRef.current = setTimeout(() => {
+			setHoveredSubmenu(null);
+			setHoveredItem(null);
+		}, 500);
+	};
+
 	return (
 		<div
 			style={{
@@ -68,17 +92,24 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 				left: `${x}px`,
 				top: `${y}px`,
 			}}
+			onMouseLeave={handleMouseLeave}
+			onMouseEnter={() => {
+				if (submenuTimeoutRef.current) {
+					clearTimeout(submenuTimeoutRef.current);
+					submenuTimeoutRef.current = null;
+				}
+			}}
 		>
 			{menuItems.map((item) => (
 				<div
 					key={item.label}
-					onMouseEnter={() => {
-						item.submenu && setHoveredSubmenu(item.label);
-						setHoveredItem(item.label);
-					}}
+					onMouseEnter={() =>
+						handleMouseEnter(item.label, !!item.submenu)
+					}
 					onMouseLeave={() => {
-						setHoveredSubmenu(null);
-						setHoveredItem(null);
+						if (!item.submenu) {
+							handleMouseLeave();
+						}
 					}}
 				>
 					<div
@@ -167,7 +198,7 @@ const styles = {
 		position: "absolute" as const,
 		left: "100%",
 		top: 0,
-		marginLeft: "4px",
+		marginLeft: "0",
 		backgroundColor: "#2a2a2a",
 		border: "1px solid #555",
 		borderRadius: "4px",

@@ -5,6 +5,7 @@ import { Card, useGameStore } from "../store";
 import ContextMenu from "./ContextMenus";
 import { ZoneDisplay, zoneStyles } from "./ZoneDisplay";
 import { ScryModal } from "./ScryModal";
+import { ExileModal } from "./ExileModal";
 
 export const GameBoard: React.FC = () => {
 	const { gameId } = useParams<{ gameId: string }>();
@@ -38,6 +39,7 @@ export const GameBoard: React.FC = () => {
 		count: number;
 		cards: any[];
 	} | null>(null);
+	const [exileModal, setExileModal] = useState<any[] | null>(null);
 	const battlefieldRef = useRef<HTMLDivElement>(null);
 	const flippedSeatsRef = useRef<Set<number>>(new Set());
 
@@ -269,7 +271,7 @@ export const GameBoard: React.FC = () => {
 
 					<div style={{ marginTop: "10px" }}>Card Size</div>
 					<div style={styles.cardScaleControls}>
-						{[1, 2, 4].map((scale) => (
+						{[1, 1.5, 2, 4].map((scale) => (
 							<button
 								key={scale}
 								onClick={() => setCardScale(scale)}
@@ -359,6 +361,9 @@ export const GameBoard: React.FC = () => {
 										setShowZoneBreakdown(`opponent-${zone}`)
 									}
 									showBreakdown={false}
+									onExileModalOpen={(cards) =>
+										setExileModal(cards)
+									}
 								/>
 							),
 						)}
@@ -578,6 +583,9 @@ export const GameBoard: React.FC = () => {
 											objectId,
 										})
 									}
+									onExileModalOpen={(cards) =>
+										setExileModal(cards)
+									}
 								/>
 							),
 						)}
@@ -622,6 +630,13 @@ export const GameBoard: React.FC = () => {
 					type={scryModal.type}
 					onConfirm={handleScryConfirm}
 					onCancel={() => setScryModal(null)}
+				/>
+			)}
+
+			{exileModal && (
+				<ExileModal
+					cards={exileModal}
+					onClose={() => setExileModal(null)}
 				/>
 			)}
 
@@ -992,7 +1007,7 @@ const styles = {
 	},
 	zoneGrid: {
 		display: "grid",
-		gridTemplateColumns: "repeat(4, 1fr)",
+		gridTemplateColumns: "1fr 1fr 0.8fr 0.8fr",
 		gap: "5px",
 		flex: 1,
 		minHeight: 0,

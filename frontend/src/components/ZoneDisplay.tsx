@@ -14,6 +14,7 @@ interface ZoneDisplayProps {
 		other: number;
 	};
 	onContextMenu?: (e: React.MouseEvent, objectId?: string) => void;
+	onExileModalOpen?: (cards: any[]) => void;
 }
 
 const getCardsByType: (objects: any[]) => {
@@ -61,6 +62,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 	onCountClick,
 	showBreakdown,
 	onContextMenu,
+	onExileModalOpen,
 }) => {
 	const count = objects.length;
 	const typeBreakdown = getCardsByType(
@@ -69,6 +71,8 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 
 	// Library zone shows a card back instead of individual cards
 	const isLibrary = zone === "library";
+	const isGraveyard = zone === "graveyard";
+	const isExile = zone === "exile";
 
 	return (
 		<div style={zoneStyles.zone}>
@@ -125,6 +129,113 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 							<div style={zoneStyles.libraryCardLabel}>
 								{count} cards
 							</div>
+						</div>
+					) : (
+						<div style={zoneStyles.emptyZone}>Empty</div>
+					)
+				) : isGraveyard ? (
+					// Graveyard displays card fronts with offset stacking
+					count > 0 ? (
+						<div style={zoneStyles.stackContainer}>
+							{objects.map((obj, idx) => {
+								const imageUrl =
+									obj.card &&
+									obj.card.image_uris &&
+									obj.card.image_uris.normal
+										? obj.card.image_uris.normal
+										: null;
+								return (
+									<div
+										key={obj.id}
+										style={{
+											...zoneStyles.stackedCard,
+											zIndex: idx,
+											transform: `translate(${idx * 2}px, ${idx * 7}px)`,
+										}}
+										onContextMenu={(e) => {
+											e.preventDefault();
+											if (onContextMenu)
+												onContextMenu(e, obj.id);
+										}}
+										title={
+											obj.card ? obj.card.name : "Unknown"
+										}
+									>
+										{imageUrl ? (
+											<img
+												src={imageUrl}
+												alt={
+													obj.card
+														? obj.card.name
+														: "Unknown"
+												}
+												style={{
+													width: "100%",
+													height: "100%",
+													borderRadius: "4px",
+												}}
+											/>
+										) : (
+											<div
+												style={
+													zoneStyles.cardPlaceholder
+												}
+											>
+												{obj.card
+													? obj.card.name
+													: "Unknown"}
+											</div>
+										)}
+									</div>
+								);
+							})}
+						</div>
+					) : (
+						<div style={zoneStyles.emptyZone}>Empty</div>
+					)
+				) : isExile ? (
+					// Exile displays card backs with offset stacking, clickable
+					count > 0 ? (
+						<div
+							style={zoneStyles.stackContainer}
+							onClick={() => {
+								if (onExileModalOpen) onExileModalOpen(objects);
+							}}
+						>
+							{objects.slice(0, 5).map((obj, idx) => (
+								<div
+									key={obj.id}
+									style={{
+										...zoneStyles.stackedCardBack,
+										zIndex: idx,
+										transform: `translate(${Math.min(idx * 5, 25)}px, ${Math.min(idx * 5, 25)}px)`,
+										cursor: "pointer",
+									}}
+									title={obj.card ? obj.card.name : "Unknown"}
+								>
+									<div
+										style={{
+											width: "100%",
+											height: "100%",
+											backgroundImage:
+												"url(/Magic_card_back.png)",
+											backgroundSize: "cover",
+											backgroundPosition: "center",
+											borderRadius: "4px",
+										}}
+									/>
+								</div>
+							))}
+							{count > 3 && (
+								<div
+									style={{
+										...zoneStyles.stackCount,
+										zIndex: 999,
+									}}
+								>
+									+{count - 3}
+								</div>
+							)}
 						</div>
 					) : (
 						<div style={zoneStyles.emptyZone}>Empty</div>
@@ -234,5 +345,56 @@ export const zoneStyles = {
 		color: "#fff",
 		textAlign: "center" as const,
 		textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+	},
+	stackContainer: {
+		position: "relative" as const,
+		width: "72px",
+		height: "100px",
+		minHeight: "100px",
+	},
+	stackedCard: {
+		position: "absolute" as const,
+		width: "60px",
+		height: "85px",
+		top: 0,
+		left: 0,
+		border: "1px solid #444",
+		borderRadius: "4px",
+		overflow: "hidden" as const,
+	},
+	stackedCardBack: {
+		position: "absolute" as const,
+		width: "50px",
+		height: "70px",
+		top: 0,
+		left: 0,
+		border: "2px solid #0d1f2d",
+		borderRadius: "4px",
+		overflow: "hidden" as const,
+	},
+	stackCount: {
+		position: "absolute" as const,
+		bottom: "5px",
+		right: "5px",
+		backgroundColor: "rgba(0, 0, 0, 0.8)",
+		color: "#fff",
+		padding: "2px 6px",
+		borderRadius: "3px",
+		fontSize: "9px" as const,
+		fontWeight: "bold" as const,
+	},
+	cardPlaceholder: {
+		width: "100%",
+		height: "100%",
+		backgroundColor: "#1a1a1a",
+		border: "1px solid #444",
+		borderRadius: "4px",
+		padding: "4px",
+		display: "flex" as const,
+		alignItems: "center" as const,
+		justifyContent: "center" as const,
+		fontSize: "7px",
+		textAlign: "center" as const,
+		color: "#bbb",
 	},
 };
