@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import { api } from "../api";
 import { Card, useGameStore } from "../store";
 import ContextMenu from "./ContextMenus";
+import { ZoneDisplay, zoneStyles } from "./ZoneDisplay";
+import { ScryModal } from "./ScryModal";
 
 export const GameBoard: React.FC = () => {
 	const { gameId } = useParams<{ gameId: string }>();
@@ -31,6 +33,11 @@ export const GameBoard: React.FC = () => {
 		string | null
 	>(null);
 	const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+	const [scryModal, setScryModal] = useState<{
+		type: "scry" | "surveil";
+		count: number;
+		cards: any[];
+	} | null>(null);
 	const battlefieldRef = useRef<HTMLDivElement>(null);
 	const flippedSeatsRef = useRef<Set<number>>(new Set());
 
@@ -47,6 +54,23 @@ export const GameBoard: React.FC = () => {
 	const executeAction = useCallback(
 		async (action: string, metadata?: any) => {
 			if (!gameId) return;
+
+			// Handle Scry and Surveil specially - show modal first
+			if ((action === "scry" || action === "surveil") && gameState) {
+				const count = (metadata && metadata.count) || 1;
+				const library = gameState.objects.filter(
+					(o) => o.zone === "library" && o.seat === viewerSeat,
+				);
+				// Get top X cards from library
+				const topCards = library.slice(0, count);
+				setScryModal({
+					type: action as "scry" | "surveil",
+					count,
+					cards: topCards,
+				});
+				return;
+			}
+
 			try {
 				await api.executeAction(gameId, {
 					seat: viewerSeat,
@@ -58,7 +82,32 @@ export const GameBoard: React.FC = () => {
 				console.error("Action failed:", err);
 			}
 		},
-		[gameId, viewerSeat, loadGameState],
+		[gameId, viewerSeat, loadGameState, gameState],
+	);
+
+	const handleScryConfirm = useCallback(
+		async (arrangement: {
+			top: string[];
+			bottom: string[];
+			graveyard?: string[];
+		}) => {
+			if (!gameId || !scryModal) return;
+			try {
+				await api.executeAction(gameId, {
+					seat: viewerSeat,
+					action_type: scryModal.type,
+					metadata: {
+						count: scryModal.count,
+						arrangement,
+					},
+				});
+				setScryModal(null);
+				await loadGameState();
+			} catch (err) {
+				console.error("Scry/Surveil failed:", err);
+			}
+		},
+		[gameId, scryModal, viewerSeat, loadGameState],
 	);
 
 	useEffect(() => {
@@ -125,37 +174,6 @@ export const GameBoard: React.FC = () => {
 
 	const playerObjects = viewerSeat === 1 ? seat1Objects : seat2Objects;
 	const opponentObjects = viewerSeat === 1 ? seat2Objects : seat1Objects;
-
-	function getCardsByType(objects: any[]) {
-		return {
-			creatures: objects.filter((o) => {
-				const type = o.card && o.card.type_line;
-				return type && type.toLowerCase().includes("creature");
-			}).length,
-			instants: objects.filter((o) => {
-				const type = o.card && o.card.type_line;
-				return type && type.toLowerCase().includes("instant");
-			}).length,
-			sorceries: objects.filter((o) => {
-				const type = o.card && o.card.type_line;
-				return type && type.toLowerCase().includes("sorcery");
-			}).length,
-			lands: objects.filter((o) => {
-				const type = o.card && o.card.type_line;
-				return type && type.toLowerCase().includes("land");
-			}).length,
-			other: objects.filter((o) => {
-				const type = o.card && o.card.type_line;
-				return (
-					type &&
-					!type.toLowerCase().includes("creature") &&
-					!type.toLowerCase().includes("instant") &&
-					!type.toLowerCase().includes("sorcery") &&
-					!type.toLowerCase().includes("land")
-				);
-			}).length,
-		};
-	}
 
 	function handleCardDropOnBattlefield(
 		e: React.DragEvent<HTMLDivElement>,
@@ -341,11 +359,6 @@ export const GameBoard: React.FC = () => {
 										setShowZoneBreakdown(`opponent-${zone}`)
 									}
 									showBreakdown={false}
-									typeBreakdown={getCardsByType(
-										opponentObjects.filter(
-											(o) => o.zone === zone,
-										),
-									)}
 								/>
 							),
 						)}
@@ -354,7 +367,7 @@ export const GameBoard: React.FC = () => {
 
 				{/* Battlefield (70%) */}
 				<div ref={battlefieldRef} style={styles.battlefieldSection}>
-					<div style={styles.zoneLabel}>Battlefield</div>
+					<div style={zoneStyles.zoneLabel}>Battlefield</div>
 
 					{/* Opponent's cards mini preview */}
 					{opponentObjects.filter((o) => o.zone === "battlefield")
@@ -557,11 +570,6 @@ export const GameBoard: React.FC = () => {
 									showBreakdown={
 										showZoneBreakdown === `player-${zone}`
 									}
-									typeBreakdown={getCardsByType(
-										playerObjects.filter(
-											(o) => o.zone === zone,
-										),
-									)}
 									onContextMenu={(e, objectId) =>
 										setContextMenu({
 											x: e.clientX,
@@ -608,104 +616,18 @@ export const GameBoard: React.FC = () => {
 				/>
 			)}
 
+			{scryModal && (
+				<ScryModal
+					cards={scryModal.cards}
+					type={scryModal.type}
+					onConfirm={handleScryConfirm}
+					onCancel={() => setScryModal(null)}
+				/>
+			)}
+
 			<div style={styles.turnInfo}>
 				Turn {gameState.turn_number} • Active: Seat{" "}
 				{gameState.active_seat}
-			</div>
-		</div>
-	);
-};
-
-interface ZoneDisplayProps {
-	zone: string;
-	label: string;
-	objects: any[];
-	redacted: boolean;
-	onCardDragStart?: (cardId: string) => void;
-	onCountClick?: () => void;
-	showBreakdown?: boolean;
-	typeBreakdown?: {
-		creatures: number;
-		instants: number;
-		sorceries: number;
-		lands: number;
-		other: number;
-	};
-	onContextMenu?: (e: React.MouseEvent, objectId?: string) => void;
-}
-
-const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
-	zone,
-	label,
-	objects,
-	redacted,
-	onCardDragStart,
-	onCountClick,
-	showBreakdown,
-	typeBreakdown,
-	onContextMenu,
-}) => {
-	const count = objects.length;
-
-	return (
-		<div style={styles.zone}>
-			<div style={styles.zoneLabel}>
-				{label}{" "}
-				<span
-					onClick={onCountClick}
-					style={{ cursor: "pointer", fontWeight: "bold" }}
-					onContextMenu={(e) => {
-						e.preventDefault();
-						if (onContextMenu) onContextMenu(e);
-					}}
-				>
-					({count})
-				</span>
-			</div>
-			{showBreakdown && typeBreakdown && (
-				<div style={styles.breakdown}>
-					{typeBreakdown.creatures > 0 && (
-						<div>Creatures: {typeBreakdown.creatures}</div>
-					)}
-					{typeBreakdown.instants > 0 && (
-						<div>Instants: {typeBreakdown.instants}</div>
-					)}
-					{typeBreakdown.sorceries > 0 && (
-						<div>Sorceries: {typeBreakdown.sorceries}</div>
-					)}
-					{typeBreakdown.lands > 0 && (
-						<div>Lands: {typeBreakdown.lands}</div>
-					)}
-					{typeBreakdown.other > 0 && (
-						<div>Other: {typeBreakdown.other}</div>
-					)}
-				</div>
-			)}
-			<div style={styles.zoneContent}>
-				{redacted ? (
-					<div style={styles.redactedCount}>{count} card(s)</div>
-				) : objects.length === 0 ? (
-					<div style={styles.emptyZone}>Empty</div>
-				) : (
-					objects.map((obj) => (
-						<div
-							key={obj.id}
-							draggable
-							onDragStart={(e) => {
-								e.dataTransfer.effectAllowed = "move";
-								e.dataTransfer.setData("text/plain", obj.id);
-								if (onCardDragStart) onCardDragStart(obj.id);
-							}}
-							onContextMenu={(e) => {
-								e.preventDefault();
-								if (onContextMenu) onContextMenu(e, obj.id);
-							}}
-							style={styles.cardItem}
-						>
-							{obj.card ? obj.card.name : "Unknown"}
-						</div>
-					))
-				)}
 			</div>
 		</div>
 	);
@@ -1074,55 +996,6 @@ const styles = {
 		gap: "5px",
 		flex: 1,
 		minHeight: 0,
-	},
-	zone: {
-		backgroundColor: "#1a1a1a",
-		padding: "6px",
-		borderRadius: "3px",
-		fontSize: "10px",
-		border: "1px solid #333",
-		display: "flex" as const,
-		flexDirection: "column" as const,
-		overflow: "hidden" as const,
-	},
-	zoneLabel: {
-		fontSize: "10px",
-		fontWeight: "bold" as const,
-		color: "#aaa",
-		marginBottom: "3px",
-	},
-	zoneContent: {
-		maxHeight: "80px",
-		overflowY: "auto" as const,
-		fontSize: "9px",
-	},
-	breakdown: {
-		fontSize: "8px",
-		color: "#888",
-		marginBottom: "3px",
-		backgroundColor: "#0d0d0d",
-		padding: "3px",
-		borderRadius: "2px",
-	},
-	cardItem: {
-		padding: "5px",
-		marginBottom: "4px",
-		backgroundColor: "#2a2a2a",
-		borderRadius: "3px",
-		cursor: "move",
-		userSelect: "none" as const,
-		fontSize: "11px",
-		border: "1px solid #444",
-		transition: "background-color 0.2s",
-	},
-	redactedCount: {
-		color: "#888",
-		fontStyle: "italic" as const,
-	},
-	emptyZone: {
-		color: "#555",
-		fontStyle: "italic" as const,
-		padding: "5px",
 	},
 	footer: {
 		display: "flex" as const,

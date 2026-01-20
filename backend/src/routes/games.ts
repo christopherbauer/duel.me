@@ -94,13 +94,15 @@ router.post("/", async (req, res) => {
 				[deckId],
 			);
 			if (!deckCardsResult) continue;
+			let libraryOrder = 0;
 			for (const row of deckCardsResult.rows) {
 				for (let i = 0; i < row.quantity; i++) {
 					await query(
-						`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id)
-             VALUES ($1, $2, $3, 'library', $4)`,
-						[uuidv4(), gameId, seat, row.card_id],
+						`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id, "order")
+             VALUES ($1, $2, $3, 'library', $4, $5)`,
+						[uuidv4(), gameId, seat, row.card_id, libraryOrder],
 					);
+					libraryOrder++;
 				}
 			}
 
@@ -170,12 +172,12 @@ router.get("/:id", async (req, res) => {
 		// Get all objects
 		const objectsResult = await query(
 			`SELECT go.id, go.seat, go.zone, go.card_id, go.is_tapped, go.is_flipped, 
-			go.counters, go.notes, go.position,
+			go.counters, go.notes, go.position, go."order",
 			c.id as card_id, c."name", c.type_line, c.oracle_text, c.mana_cost, c.cmc, c.power, c.toughness, c.colors, c.color_identity, c.keywords, c.layout, c.image_uris
        FROM game_objects go
        LEFT JOIN cards c ON go.card_id = c.id
        WHERE go.game_session_id = $1
-       ORDER BY go.zone, go.created_at`,
+       ORDER BY go.zone, go."order", go.created_at`,
 			[id],
 		);
 
@@ -312,7 +314,34 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 				}
 			}
 		} else if (action_type === "shuffle_library") {
-			// Shuffling is handled on client side, just log the action
+			// Shuffle library by reassigning order values
+			const libraryCardsResult = await query(
+				`SELECT id FROM game_objects 
+				 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
+				 ORDER BY "order", id`,
+				[id, seat],
+			);
+
+			if (libraryCardsResult && libraryCardsResult.rows) {
+				// Create an array of card IDs and shuffle them
+				const cardIds = libraryCardsResult.rows.map(
+					(row: any) => row.id,
+				);
+
+				// Fisher-Yates shuffle algorithm
+				for (let i = cardIds.length - 1; i > 0; i--) {
+					const j = Math.floor(Math.random() * (i + 1));
+					[cardIds[i], cardIds[j]] = [cardIds[j], cardIds[i]];
+				}
+
+				// Update library order by setting the order field
+				for (let index = 0; index < cardIds.length; index++) {
+					await query(
+						`UPDATE game_objects SET "order" = $1 WHERE id = $2`,
+						[index, cardIds[index]],
+					);
+				}
+			}
 			logger.info(`Library shuffled by seat ${seat} in game ${id}`);
 		} else if (action_type === "discard") {
 			// Move card from hand to graveyard
