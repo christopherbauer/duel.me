@@ -16,6 +16,9 @@ export const api = {
 	listDecks: () => client.get("/decks"),
 	createDeck: (payload: any) => client.post("/decks", payload),
 	getDeck: (id: string) => client.get(`/decks/${id}`),
+	updateDeck: (id: string, payload: any) =>
+		client.put(`/decks/${id}`, payload),
+	deleteDeck: (id: string) => client.delete(`/decks/${id}`),
 
 	// Games
 	listGames: () => client.get("/games"),

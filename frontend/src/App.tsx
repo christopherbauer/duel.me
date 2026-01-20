@@ -1,9 +1,15 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import {
+	BrowserRouter,
+	Routes,
+	Route,
+	Link,
+	useParams,
+} from "react-router-dom";
+import { DeckList } from "./components/DeckList";
 import { DeckLoader } from "./components/DeckLoader";
 import { GameSetup } from "./components/GameSetup";
 import { GameBoard } from "./components/GameBoard";
-import { useGameStore } from "./store";
 
 function HomePage() {
 	return (
@@ -12,8 +18,8 @@ function HomePage() {
 			<p style={styles.subtitle}>Commander Duel Playtester v0</p>
 
 			<div style={styles.buttonGroup}>
-				<Link to="/create-deck">
-					<button style={styles.primaryButton}>Create Deck</button>
+				<Link to="/decks">
+					<button style={styles.primaryButton}>Manage Decks</button>
 				</Link>
 				<Link to="/setup-game">
 					<button style={styles.primaryButton}>Start Game</button>
@@ -23,27 +29,44 @@ function HomePage() {
 	);
 }
 
-function App() {
-	const { clearGame } = useGameStore();
+function DeckDetailPage() {
+	const { deckId } = useParams<{ deckId: string }>();
+	const [updated, setUpdated] = React.useState(false);
 
+	const handleDeckUpdated = (id: string) => {
+		setUpdated(true);
+	};
+
+	return (
+		<div style={styles.container}>
+			<Link to="/decks">
+				<button style={styles.backButton}>← Back to Decks</button>
+			</Link>
+			<DeckLoader deckId={deckId} onDeckUpdated={handleDeckUpdated} />
+		</div>
+	);
+}
+
+function App() {
 	return (
 		<BrowserRouter>
 			<div style={styles.app}>
 				<Routes>
 					<Route path="/" element={<HomePage />} />
 					<Route
-						path="/create-deck"
+						path="/decks"
 						element={
 							<div style={styles.container}>
 								<Link to="/">
 									<button style={styles.backButton}>
-										← Back
+										← Home
 									</button>
 								</Link>
-								<DeckLoader onDeckCreated={() => {}} />
+								<DeckList />
 							</div>
 						}
 					/>
+					<Route path="/decks/:deckId" element={<DeckDetailPage />} />
 					<Route
 						path="/setup-game"
 						element={
