@@ -350,6 +350,33 @@ export const GameBoard: React.FC = () => {
 				{/* Battlefield (70%) */}
 				<div ref={battlefieldRef} style={styles.battlefieldSection}>
 					<div style={styles.zoneLabel}>Battlefield</div>
+
+					{/* Opponent's cards mini preview */}
+					{opponentObjects.filter((o) => o.zone === "battlefield")
+						.length > 0 && (
+						<div style={styles.opponentPreview}>
+							<div style={styles.opponentPreviewLabel}>
+								Opponent's Cards
+							</div>
+							<div style={styles.opponentPreviewGrid}>
+								{opponentObjects
+									.filter((o) => o.zone === "battlefield")
+									.map((obj) => (
+										<div
+											key={obj.id}
+											style={styles.opponentPreviewCard}
+										>
+											<CardImage
+												card={obj.card}
+												isTapped={obj.is_tapped}
+												scale={0.4}
+											/>
+										</div>
+									))}
+							</div>
+						</div>
+					)}
+
 					<div
 						style={styles.battlefieldGrid}
 						onDragOver={(e) => e.preventDefault()}
@@ -367,7 +394,11 @@ export const GameBoard: React.FC = () => {
 						}}
 					>
 						{gameState.objects
-							.filter((o) => o.zone === "battlefield")
+							.filter(
+								(o) =>
+									o.zone === "battlefield" &&
+									o.seat === viewerSeat,
+							)
 							.map((obj) => (
 								<div
 									key={obj.id}
@@ -927,6 +958,40 @@ const styles = {
 		borderRadius: "6px",
 		backgroundColor: "#0d0d0d",
 		overflow: "hidden" as const,
+	},
+	opponentPreview: {
+		position: "absolute" as const,
+		top: "8px",
+		left: "8px",
+		right: "8px",
+		height: "100px",
+		backgroundColor: "rgba(0, 0, 0, 0.8)",
+		border: "1px solid #555",
+		borderRadius: "4px",
+		padding: "6px",
+		zIndex: 10,
+		display: "flex" as const,
+		flexDirection: "column" as const,
+	},
+	opponentPreviewLabel: {
+		fontSize: "10px",
+		fontWeight: "bold" as const,
+		color: "#888",
+		marginBottom: "4px",
+		textTransform: "uppercase" as const,
+		letterSpacing: "1px",
+	},
+	opponentPreviewGrid: {
+		display: "flex" as const,
+		gap: "4px",
+		flexWrap: "wrap" as const,
+		overflow: "auto" as const,
+		flex: 1,
+	},
+	opponentPreviewCard: {
+		width: "50px",
+		height: "68px",
+		flexShrink: 0,
 	},
 	positionedCard: {
 		position: "absolute" as const,
