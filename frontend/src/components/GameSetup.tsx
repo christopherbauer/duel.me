@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { CreateGameRequest } from "../types";
+import { isAxiosError } from "axios";
 
 export const GameSetup: React.FC = () => {
 	const navigate = useNavigate();
@@ -45,8 +46,12 @@ export const GameSetup: React.FC = () => {
 			};
 			const response = await api.createGame(payload);
 			navigate(`/games/${response.data.id}`);
-		} catch (err: any) {
-			setError(err.response?.data?.error || "Failed to create game");
+		} catch (err) {
+			if (isAxiosError(err)) {
+				setError(err.message || "Failed to create game");
+			} else {
+				throw err;
+			}
 		} finally {
 			setLoading(false);
 		}

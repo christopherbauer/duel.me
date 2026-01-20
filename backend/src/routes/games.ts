@@ -302,7 +302,10 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 		if (action_type === "draw") {
 			const count = metadata.count || 1;
 			const drawResult = await query(
-				`SELECT id FROM game_objects WHERE game_session_id = $1 AND seat = $2 AND zone = 'library' LIMIT $3`,
+				`SELECT id FROM game_objects 
+				 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
+				 ORDER BY "order", id
+				 LIMIT $3`,
 				[id, seat, count],
 			);
 			if (drawResult && drawResult.rows) {
@@ -343,7 +346,98 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 				}
 			}
 			logger.info(`Library shuffled by seat ${seat} in game ${id}`);
-		} else if (action_type === "discard") {
+		} else if (action_type === "scry") {
+			// Scry: arrange top X cards, unplaced go to bottom
+			const { count, arrangement } = metadata;
+			if (arrangement && count) {
+				const { top, bottom } = arrangement;
+
+				// Get all library cards currently
+				const allCardsResult = await query(
+					`SELECT id FROM game_objects
+					 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
+					 ORDER BY "order", id`,
+					[id, seat],
+				);
+
+				if (allCardsResult && allCardsResult.rows) {
+					const allCardIds = allCardsResult.rows.map(
+						(row: any) => row.id,
+					);
+
+					// Cards not in scry arrangement are the ones below the scried cards
+					const scryCardIds = new Set([...top, ...bottom]);
+					const remainingCards = allCardIds.filter(
+						(cardId: string) => !scryCardIds.has(cardId),
+					);
+
+					// Rebuild the entire library order:
+					// top cards first, then remaining cards, then bottom cards last
+					const newOrder = [...top, ...remainingCards, ...bottom];
+
+					// Update all cards with new order values
+					for (let i = 0; i < newOrder.length; i++) {
+						await query(
+							`UPDATE game_objects SET "order" = $1 WHERE id = $2`,
+							[i, newOrder[i]],
+						);
+					}
+				}
+			}
+			logger.info(`Scry ${count} by seat ${seat} in game ${id}`);
+		} else if (action_type === "surveil") {
+			// Surveil: arrange cards, putting some to graveyard
+			const { count, arrangement } = metadata;
+			if (arrangement) {
+				const { top, graveyard } = arrangement;
+
+				// Get all library cards currently
+				const allCardsResult = await query(
+					`SELECT id FROM game_objects
+					 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
+					 ORDER BY "order", id`,
+					[id, seat],
+				);
+
+				if (allCardsResult && allCardsResult.rows) {
+					const allCardIds = allCardsResult.rows.map(
+						(row: any) => row.id,
+					);
+
+					// Cards not in surveil arrangement are the ones below the surveiled cards
+					const surveilCardIds = new Set([
+						...top,
+						...(graveyard || []),
+					]);
+					const remainingCards = allCardIds.filter(
+						(cardId: string) => !surveilCardIds.has(cardId),
+					);
+
+					// Update remaining library cards with sequential order
+					for (let i = 0; i < top.length; i++) {
+						await query(
+							`UPDATE game_objects SET "order" = $1 WHERE id = $2`,
+							[i, top[i]],
+						);
+					}
+					for (let i = 0; i < remainingCards.length; i++) {
+						await query(
+							`UPDATE game_objects SET "order" = $1 WHERE id = $2`,
+							[top.length + i, remainingCards[i]],
+						);
+					}
+
+					// Move cards to graveyard
+					for (const cardId of graveyard) {
+						await query(
+							`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`,
+							[cardId],
+						);
+					}
+				}
+			}
+			logger.info(`Surveil ${count} by seat ${seat} in game ${id}`);
+		} else if (action_type === "exile_from_top") {
 			// Move card from hand to graveyard
 			const objectId = metadata.objectId;
 			if (objectId) {
@@ -353,14 +447,24 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 				);
 			}
 		} else if (action_type === "exile_from_zone") {
-			// Move card from its current zone to exile
-			const objectId = metadata.objectId;
-			if (objectId) {
-				await query(
-					`UPDATE game_objects SET zone = 'exile' WHERE id = $1`,
-					[objectId],
-				);
+			// Exile X cards from top of library
+			const count = metadata.count || 1;
+			const exileResult = await query(
+				`SELECT id FROM game_objects 
+				 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
+				 ORDER BY "order", id
+				 LIMIT $3`,
+				[id, seat, count],
+			);
+			if (exileResult && exileResult.rows) {
+				for (const row of exileResult.rows) {
+					await query(
+						`UPDATE game_objects SET zone = 'exile' WHERE id = $1`,
+						[row.id],
+					);
+				}
 			}
+			logger.info(`Exiled ${count} cards from library by seat ${seat}`);
 		} else if (action_type === "return_to_hand") {
 			// Move card back to hand from graveyard or exile
 			const objectId = metadata.objectId;

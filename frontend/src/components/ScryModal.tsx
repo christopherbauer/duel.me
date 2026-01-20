@@ -52,6 +52,42 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 		});
 	};
 
+	const renderCard = (card: any) => {
+		const handleDragStart = (e: React.DragEvent) => {
+			e.dataTransfer.effectAllowed = "move";
+			e.dataTransfer.setData(
+				"application/json",
+				JSON.stringify({ cardId: card.id }),
+			);
+		};
+
+		return (
+			<div
+				key={card.id}
+				style={styles.card}
+				draggable
+				onDragStart={handleDragStart}
+				title={card.card && card.card.name ? card.card.name : "Unknown"}
+			>
+				{card.card &&
+				card.card.image_uris &&
+				card.card.image_uris.normal ? (
+					<img
+						src={card.card.image_uris.normal}
+						style={styles.cardImage}
+						alt={card.card.name || "Card"}
+					/>
+				) : (
+					<div style={styles.cardPlaceholder}>
+						{card.card && card.card.name
+							? card.card.name
+							: "Unknown"}
+					</div>
+				)}
+			</div>
+		);
+	};
+
 	return (
 		<div style={styles.overlay}>
 			<div style={styles.modal}>
@@ -61,8 +97,8 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 					</h2>
 					<p style={styles.instructions}>
 						{type === "scry"
-							? "Arrange top X cards. Cards not placed on top go to the bottom."
-							: "Arrange cards. Cards moved to graveyard are exiled."}
+							? "Drag cards to arrange. Unplaced cards go to bottom."
+							: "Drag cards to arrange. Unplaced cards go to graveyard."}
 					</p>
 				</div>
 
@@ -72,76 +108,28 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 						<div style={styles.zoneTitle}>
 							Top of Library ({top.length})
 						</div>
-						<div style={styles.zoneCards}>
+						<div
+							style={styles.zoneCards}
+							onDragOver={(e) => {
+								e.preventDefault();
+								e.dataTransfer.dropEffect = "move";
+							}}
+							onDrop={(e) => {
+								e.preventDefault();
+								const data = JSON.parse(
+									e.dataTransfer.getData("application/json"),
+								);
+								if (data.cardId && !top.includes(data.cardId)) {
+									moveToTop(data.cardId);
+								}
+							}}
+						>
 							{topCards.length === 0 ? (
 								<div style={styles.emptyZone}>
 									Drag cards here
 								</div>
 							) : (
-								topCards.map((card) => (
-									<div
-										key={card.id}
-										style={styles.cardItem}
-										draggable
-										onDragStart={(e) => {
-											e.dataTransfer.effectAllowed =
-												"move";
-											e.dataTransfer.setData(
-												"application/json",
-												JSON.stringify({
-													cardId: card.id,
-													from: "top",
-												}),
-											);
-										}}
-										onDragOver={(e) => {
-											e.preventDefault();
-											e.dataTransfer.dropEffect = "move";
-										}}
-										onDrop={(e) => {
-											e.preventDefault();
-											const data = JSON.parse(
-												e.dataTransfer.getData(
-													"application/json",
-												),
-											);
-											if (
-												data.from !== "top" &&
-												data.cardId !== card.id
-											) {
-												moveToTop(data.cardId);
-											}
-										}}
-									>
-										<div style={styles.cardName}>
-											{card.card && card.card.name
-												? card.card.name
-												: "Unknown"}
-										</div>
-										<div style={styles.cardActions}>
-											{type === "scry" && (
-												<button
-													onClick={() =>
-														moveToBottom(card.id)
-													}
-													style={styles.actionButton}
-												>
-													→ Bottom
-												</button>
-											)}
-											{type === "surveil" && (
-												<button
-													onClick={() =>
-														moveToGraveyard(card.id)
-													}
-													style={styles.actionButton}
-												>
-													→ Graveyard
-												</button>
-											)}
-										</div>
-									</div>
-								))
+								topCards.map((card) => renderCard(card))
 							)}
 						</div>
 					</div>
@@ -152,63 +140,33 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 							<div style={styles.zoneTitle}>
 								Bottom of Library ({bottom.length})
 							</div>
-							<div style={styles.zoneCards}>
+							<div
+								style={styles.zoneCards}
+								onDragOver={(e) => {
+									e.preventDefault();
+									e.dataTransfer.dropEffect = "move";
+								}}
+								onDrop={(e) => {
+									e.preventDefault();
+									const data = JSON.parse(
+										e.dataTransfer.getData(
+											"application/json",
+										),
+									);
+									if (
+										data.cardId &&
+										!bottom.includes(data.cardId)
+									) {
+										moveToBottom(data.cardId);
+									}
+								}}
+							>
 								{bottomCards.length === 0 ? (
 									<div style={styles.emptyZone}>
 										Drag cards here
 									</div>
 								) : (
-									bottomCards.map((card) => (
-										<div
-											key={card.id}
-											style={styles.cardItem}
-											draggable
-											onDragStart={(e) => {
-												e.dataTransfer.effectAllowed =
-													"move";
-												e.dataTransfer.setData(
-													"application/json",
-													JSON.stringify({
-														cardId: card.id,
-														from: "bottom",
-													}),
-												);
-											}}
-											onDragOver={(e) => {
-												e.preventDefault();
-												e.dataTransfer.dropEffect =
-													"move";
-											}}
-											onDrop={(e) => {
-												e.preventDefault();
-												const data = JSON.parse(
-													e.dataTransfer.getData(
-														"application/json",
-													),
-												);
-												if (
-													data.from !== "bottom" &&
-													data.cardId !== card.id
-												) {
-													moveToBottom(data.cardId);
-												}
-											}}
-										>
-											<div style={styles.cardName}>
-												{card.card && card.card.name
-													? card.card.name
-													: "Unknown"}
-											</div>
-											<button
-												onClick={() =>
-													moveToTop(card.id)
-												}
-												style={styles.actionButton}
-											>
-												← Top
-											</button>
-										</div>
-									))
+									bottomCards.map((card) => renderCard(card))
 								)}
 							</div>
 						</div>
@@ -220,65 +178,35 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 							<div style={styles.zoneTitle}>
 								Graveyard ({graveyard.length})
 							</div>
-							<div style={styles.zoneCards}>
+							<div
+								style={styles.zoneCards}
+								onDragOver={(e) => {
+									e.preventDefault();
+									e.dataTransfer.dropEffect = "move";
+								}}
+								onDrop={(e) => {
+									e.preventDefault();
+									const data = JSON.parse(
+										e.dataTransfer.getData(
+											"application/json",
+										),
+									);
+									if (
+										data.cardId &&
+										!graveyard.includes(data.cardId)
+									) {
+										moveToGraveyard(data.cardId);
+									}
+								}}
+							>
 								{graveyardCards.length === 0 ? (
 									<div style={styles.emptyZone}>
 										Drag cards here
 									</div>
 								) : (
-									graveyardCards.map((card) => (
-										<div
-											key={card.id}
-											style={styles.cardItem}
-											draggable
-											onDragStart={(e) => {
-												e.dataTransfer.effectAllowed =
-													"move";
-												e.dataTransfer.setData(
-													"application/json",
-													JSON.stringify({
-														cardId: card.id,
-														from: "graveyard",
-													}),
-												);
-											}}
-											onDragOver={(e) => {
-												e.preventDefault();
-												e.dataTransfer.dropEffect =
-													"move";
-											}}
-											onDrop={(e) => {
-												e.preventDefault();
-												const data = JSON.parse(
-													e.dataTransfer.getData(
-														"application/json",
-													),
-												);
-												if (
-													data.from !== "graveyard" &&
-													data.cardId !== card.id
-												) {
-													moveToGraveyard(
-														data.cardId,
-													);
-												}
-											}}
-										>
-											<div style={styles.cardName}>
-												{card.card && card.card.name
-													? card.card.name
-													: "Unknown"}
-											</div>
-											<button
-												onClick={() =>
-													moveToTop(card.id)
-												}
-												style={styles.actionButton}
-											>
-												← Top
-											</button>
-										</div>
-									))
+									graveyardCards.map((card) =>
+										renderCard(card),
+									)
 								)}
 							</div>
 						</div>
@@ -324,7 +252,7 @@ const styles = {
 		border: "2px solid #0066ff",
 		borderRadius: "8px",
 		padding: "20px",
-		maxWidth: "800px",
+		maxWidth: "1000px",
 		maxHeight: "80vh",
 		display: "flex" as const,
 		flexDirection: "column" as const,
@@ -372,29 +300,46 @@ const styles = {
 	zoneCards: {
 		flex: 1,
 		display: "flex" as const,
-		flexDirection: "column" as const,
-		gap: "8px",
+		flexDirection: "row" as const,
+		flexWrap: "wrap" as const,
+		gap: "12px",
 		overflowY: "auto" as const,
 		backgroundColor: "rgba(0, 0, 0, 0.5)",
 		borderRadius: "4px",
-		padding: "8px",
-		minHeight: "150px",
+		padding: "12px",
+		minHeight: "220px",
+		alignContent: "flex-start" as const,
 	},
-	cardItem: {
+	card: {
+		width: "140px",
+		height: "195px",
+		flex: "0 0 auto",
+		cursor: "move",
+		transition: "opacity 0.2s, transform 0.2s",
+		border: "2px solid transparent",
+		borderRadius: "4px",
+		opacity: 1,
+	},
+	cardImage: {
+		width: "100%",
+		height: "100%",
+		borderRadius: "4px",
+		objectFit: "cover" as const,
+	},
+	cardPlaceholder: {
+		width: "100%",
+		height: "100%",
 		backgroundColor: "#2a2a2a",
 		border: "1px solid #555",
 		borderRadius: "4px",
-		padding: "8px",
 		display: "flex" as const,
-		justifyContent: "space-between" as const,
 		alignItems: "center" as const,
-		cursor: "move",
-		transition: "background-color 0.2s, border-color 0.2s",
-	},
-	cardName: {
-		fontSize: "11px",
-		color: "#fff",
-		flex: 1,
+		justifyContent: "center" as const,
+		fontSize: "10px",
+		color: "#aaa",
+		textAlign: "center" as const,
+		padding: "8px",
+		boxSizing: "border-box" as const,
 	},
 	cardActions: {
 		display: "flex" as const,
