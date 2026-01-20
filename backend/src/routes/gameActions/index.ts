@@ -22,6 +22,7 @@ enum Actions {
 	return_to_hand,
 	move_to_battlefield,
 	move_to_graveyard,
+	discard,
 }
 
 const actionMap: Record<keyof typeof Actions, ActionMethod> = {
@@ -38,6 +39,7 @@ const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	return_to_hand: moveToHand,
 	move_to_battlefield: moveToBattlefield,
 	move_to_graveyard: moveToGraveyard,
+	discard: moveToGraveyard,
 };
 export const handleGameAction = async (
 	action: keyof typeof Actions,
