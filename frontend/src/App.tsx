@@ -1,88 +1,78 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { DeckLoader } from "./components/DeckLoader";
 import { GameSetup } from "./components/GameSetup";
 import { GameBoard } from "./components/GameBoard";
 import { useGameStore } from "./store";
 
-type View = "home" | "create-deck" | "setup-game" | "in-game";
+function HomePage() {
+	return (
+		<div style={styles.homeContainer}>
+			<h1 style={styles.title}>duel.me</h1>
+			<p style={styles.subtitle}>Commander Duel Playtester v0</p>
+
+			<div style={styles.buttonGroup}>
+				<Link to="/create-deck">
+					<button style={styles.primaryButton}>Create Deck</button>
+				</Link>
+				<Link to="/setup-game">
+					<button style={styles.primaryButton}>Start Game</button>
+				</Link>
+			</div>
+		</div>
+	);
+}
 
 function App() {
-	const [view, setView] = useState<View>("home");
-	const { currentGameId, setCurrentGame, clearGame } = useGameStore();
-
-	useEffect(() => {
-		if (currentGameId && view !== "in-game") {
-			setView("in-game");
-		}
-	}, [currentGameId, view]);
-
-	const handleBackToHome = () => {
-		clearGame();
-		setView("home");
-	};
+	const { clearGame } = useGameStore();
 
 	return (
-		<div style={styles.app}>
-			{view === "home" && (
-				<div style={styles.homeContainer}>
-					<h1 style={styles.title}>duel.me</h1>
-					<p style={styles.subtitle}>Commander Duel Playtester v0</p>
-
-					<div style={styles.buttonGroup}>
-						<button
-							style={styles.primaryButton}
-							onClick={() => setView("create-deck")}
-						>
-							Create Deck
-						</button>
-						<button
-							style={styles.primaryButton}
-							onClick={() => setView("setup-game")}
-						>
-							Start Game
-						</button>
-					</div>
-				</div>
-			)}
-
-			{view === "create-deck" && (
-				<div style={styles.container}>
-					<button
-						style={styles.backButton}
-						onClick={() => setView("home")}
-					>
-						← Back
-					</button>
-					<DeckLoader onDeckCreated={() => setView("home")} />
-				</div>
-			)}
-
-			{view === "setup-game" && (
-				<div style={styles.container}>
-					<button
-						style={styles.backButton}
-						onClick={() => setView("home")}
-					>
-						← Back
-					</button>
-					<GameSetup
-						onGameCreated={(gameId) => setCurrentGame(gameId)}
+		<BrowserRouter>
+			<div style={styles.app}>
+				<Routes>
+					<Route path="/" element={<HomePage />} />
+					<Route
+						path="/create-deck"
+						element={
+							<div style={styles.container}>
+								<Link to="/">
+									<button style={styles.backButton}>
+										← Back
+									</button>
+								</Link>
+								<DeckLoader onDeckCreated={() => {}} />
+							</div>
+						}
 					/>
-				</div>
-			)}
-
-			{view === "in-game" && (
-				<div>
-					<button
-						style={styles.backButton}
-						onClick={handleBackToHome}
-					>
-						← Back to Home
-					</button>
-					<GameBoard />
-				</div>
-			)}
-		</div>
+					<Route
+						path="/setup-game"
+						element={
+							<div style={styles.container}>
+								<Link to="/">
+									<button style={styles.backButton}>
+										← Back
+									</button>
+								</Link>
+								<GameSetup />
+							</div>
+						}
+					/>
+					<Route
+						path="/games/:gameId"
+						element={
+							<div>
+								<Link to="/">
+									<button style={styles.backButton}>
+										← Back to Home
+									</button>
+								</Link>
+								<GameBoard />
+							</div>
+						}
+					/>
+				</Routes>
+			</div>
+		</BrowserRouter>
 	);
 }
 

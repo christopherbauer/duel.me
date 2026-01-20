@@ -95,7 +95,7 @@ router.post("/", async (req, res) => {
 
 		// Parse and insert deck cards
 		for (const line of cardLines) {
-			const match = line.match(/^(\d+)?\s+(.+)$/i);
+			const match = line.match(/^(\d+)?x?\s+(.+)$/i);
 			if (match) {
 				const quantity = parseInt(match[1]);
 				const cardName = match[2].trim();

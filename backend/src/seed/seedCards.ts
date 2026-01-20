@@ -184,25 +184,25 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 			const offset = i * 39;
 			return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${
 				offset + 4
-			}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${
+			}::jsonb, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${
 				offset + 8
 			}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${
 				offset + 12
 			}, $${offset + 13}, $${offset + 14}, $${offset + 15}, $${
 				offset + 16
-			}::jsonb, $${offset + 17}::jsonb, $${offset + 18}, $${
-				offset + 19
-			}, $${offset + 20}, $${offset + 21}, $${offset + 22}, $${
-				offset + 23
-			}, $${offset + 24}, $${offset + 25}, $${offset + 26}, $${
+			}::jsonb, $${offset + 17}, $${offset + 18}, $${offset + 19}, $${
+				offset + 20
+			}, $${offset + 21}, $${offset + 22}, $${offset + 23}::jsonb, $${
+				offset + 24
+			}::jsonb, $${offset + 25}::jsonb, $${offset + 26}::jsonb, $${
 				offset + 27
-			}, $${offset + 28}, $${offset + 29}, $${offset + 30}::jsonb, $${
-				offset + 31
-			}::jsonb, $${offset + 32}::jsonb, $${offset + 33}::jsonb, $${
-				offset + 34
-			}::jsonb, $${offset + 35}, $${offset + 36}, $${offset + 37}, $${
-				offset + 38
-			}, $${offset + 39})`;
+			}::jsonb, $${offset + 28}::jsonb, $${offset + 29}, $${
+				offset + 30
+			}, $${offset + 31}::jsonb, $${offset + 32}::jsonb, $${
+				offset + 33
+			}::jsonb, $${offset + 34}, $${offset + 35}, $${offset + 36}, $${
+				offset + 37
+			}, $${offset + 38}, $${offset + 39})`;
 		})
 		.join(",");
 
@@ -223,7 +223,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 		card.highres_image,
 		card.image_status,
 		JSON.stringify(card.image_uris || {}),
-		JSON.stringify(card.mana_cost || ""),
+		card.mana_cost || null,
 		card.cmc || null,
 		card.type_line,
 		card.oracle_text || null,
@@ -237,8 +237,8 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 		JSON.stringify(card.games || []),
 		card.reserved,
 		card.game_changer,
-		JSON.stringify(card.foil),
-		JSON.stringify(card.nonfoil),
+		JSON.stringify(card.foil || {}),
+		JSON.stringify(card.nonfoil || {}),
 		JSON.stringify(card.finishes || []),
 		card.oversized,
 		card.promo,

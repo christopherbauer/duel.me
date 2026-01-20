@@ -85,7 +85,7 @@ export const DeckLoader: React.FC<DeckLoaderProps> = ({ onDeckCreated }) => {
 				<textarea
 					value={deckText}
 					onChange={(e) => setDeckText(e.target.value)}
-					placeholder="1 Mountain&#10;2 Lightning Bolt&#10;..."
+					placeholder={"1 Mountain\n2 Lightning Bolt\n..."}
 					style={{
 						...styles.input,
 						minHeight: "300px",

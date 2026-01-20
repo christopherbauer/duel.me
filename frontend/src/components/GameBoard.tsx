@@ -1,15 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import { api } from "../api";
 import { Card, useGameStore } from "../store";
 
 export const GameBoard: React.FC = () => {
-	const {
-		currentGameId,
-		viewerSeat,
-		setViewerSeat,
-		gameState,
-		setGameState,
-	} = useGameStore();
+	const { gameId } = useParams<{ gameId: string }>();
+	const { viewerSeat, setViewerSeat, gameState, setGameState } =
+		useGameStore();
 	const [draggedCard, setDraggedCard] = useState<string | null>(null);
 	const [dragStart, setDragStart] = useState<{
 		cardId: string;
@@ -18,22 +15,22 @@ export const GameBoard: React.FC = () => {
 	} | null>(null);
 
 	const loadGameState = useCallback(async () => {
-		if (!currentGameId) return;
+		if (!gameId) return;
 		try {
-			const response = await api.getGame(currentGameId, viewerSeat);
+			const response = await api.getGame(gameId, viewerSeat);
 			setGameState(response.data);
 		} catch (err) {
 			console.error("Failed to load game state:", err);
 		}
-	}, [currentGameId, viewerSeat, setGameState]);
+	}, [gameId, viewerSeat, setGameState]);
 
 	useEffect(() => {
-		if (currentGameId) {
+		if (gameId) {
 			loadGameState();
 			const interval = setInterval(loadGameState, 5000);
 			return () => clearInterval(interval);
 		}
-	}, [currentGameId, viewerSeat, loadGameState]);
+	}, [gameId, viewerSeat, loadGameState]);
 
 	if (!gameState) {
 		return <div style={styles.loading}>Loading game...</div>;
@@ -306,9 +303,9 @@ export const GameBoard: React.FC = () => {
 	);
 
 	async function executeAction(action: string, metadata?: any) {
-		if (!currentGameId) return;
+		if (!gameId) return;
 		try {
-			await api.executeAction(currentGameId, {
+			await api.executeAction(gameId, {
 				seat: viewerSeat,
 				action_type: action,
 				metadata,

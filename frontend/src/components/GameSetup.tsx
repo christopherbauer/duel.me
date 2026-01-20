@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 
-interface GameSetupProps {
-	onGameCreated?: (gameId: string) => void;
-}
-
-export const GameSetup: React.FC<GameSetupProps> = ({ onGameCreated }) => {
+export const GameSetup: React.FC = () => {
+	const navigate = useNavigate();
 	const [decks, setDecks] = useState<any[]>([]);
 	const [selectedDeck1, setSelectedDeck1] = useState("");
 	const [selectedDeck2, setSelectedDeck2] = useState("");
@@ -44,7 +42,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ onGameCreated }) => {
 					decks.find((d) => d.id === selectedDeck2)?.name || "Deck 2"
 				}`,
 			});
-			onGameCreated?.(response.data.id);
+			navigate(`/games/${response.data.id}`);
 		} catch (err: any) {
 			setError(err.response?.data?.error || "Failed to create game");
 		} finally {
