@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { CreateGameRequest } from "../types";
 
 export const GameSetup: React.FC = () => {
 	const navigate = useNavigate();
@@ -33,15 +34,16 @@ export const GameSetup: React.FC = () => {
 		setError("");
 
 		try {
-			const response = await api.createGame({
+			const payload: CreateGameRequest = {
 				deck1_id: selectedDeck1,
 				deck2_id: selectedDeck2,
 				name: `${
-					decks.find((d) => d.id === selectedDeck1)?.name || "Deck 1"
+					decks.find((d) => d.id === selectedDeck1).name || "Deck 1"
 				} vs ${
-					decks.find((d) => d.id === selectedDeck2)?.name || "Deck 2"
+					decks.find((d) => d.id === selectedDeck2).name || "Deck 2"
 				}`,
-			});
+			};
+			const response = await api.createGame(payload);
 			navigate(`/games/${response.data.id}`);
 		} catch (err: any) {
 			setError(err.response?.data?.error || "Failed to create game");

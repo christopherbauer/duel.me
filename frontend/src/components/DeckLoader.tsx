@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../api";
+import { CreateDeckRequest } from "../types";
 
 interface DeckLoaderProps {
 	deckId?: string;
@@ -196,7 +197,7 @@ export const DeckLoader: React.FC<DeckLoaderProps> = ({
 						!line.toLowerCase().includes("sideboard"),
 				);
 
-			const payload = {
+			const payload: CreateDeckRequest = {
 				name: deckName,
 				description: `Last updated ${new Date().toLocaleString()}`,
 				cardLines,
