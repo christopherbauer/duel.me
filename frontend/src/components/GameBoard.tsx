@@ -324,7 +324,7 @@ export const GameBoard: React.FC = () => {
 							<button
 								style={styles.lifeButton}
 								onClick={() =>
-									executeAction("life_change", { delta: -1 })
+									executeAction("life_change", { amount: -1 })
 								}
 							>
 								−
@@ -332,7 +332,7 @@ export const GameBoard: React.FC = () => {
 							<button
 								style={styles.lifeButton}
 								onClick={() =>
-									executeAction("life_change", { delta: 1 })
+									executeAction("life_change", { amount: 1 })
 								}
 							>
 								+
@@ -532,7 +532,7 @@ export const GameBoard: React.FC = () => {
 							<button
 								style={styles.lifeButton}
 								onClick={() =>
-									executeAction("life_change", { delta: -1 })
+									executeAction("life_change", { amount: -1 })
 								}
 							>
 								−
@@ -540,7 +540,7 @@ export const GameBoard: React.FC = () => {
 							<button
 								style={styles.lifeButton}
 								onClick={() =>
-									executeAction("life_change", { delta: 1 })
+									executeAction("life_change", { amount: 1 })
 								}
 							>
 								+

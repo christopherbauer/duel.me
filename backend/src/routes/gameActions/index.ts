@@ -4,24 +4,9 @@ import { drawFromLibrary, moveToLibrary, scry, surveil } from "./library";
 import { lifeChange } from "./lifeChange";
 import { exileTopFromLibrary, moveToExile } from "./exile";
 import { moveToHand } from "./hand";
-import { moveToBattlefield } from "./play";
+import { moveToBattlefield, moveToGraveyard } from "./play";
 import { ActionMethod } from "./types";
 import { query } from "../../db/pool";
-export {
-	tap,
-	untap,
-	toggle_tap,
-	shuffleLibrary,
-	drawFromLibrary,
-	moveToLibrary,
-	lifeChange,
-	moveToExile,
-	exileTopFromLibrary,
-	scry,
-	surveil,
-	moveToHand,
-	moveToBattlefield,
-};
 
 enum Actions {
 	tap,
@@ -36,6 +21,7 @@ enum Actions {
 	surveil,
 	return_to_hand,
 	move_to_battlefield,
+	move_to_graveyard,
 }
 
 const actionMap: Record<keyof typeof Actions, ActionMethod> = {
@@ -51,6 +37,7 @@ const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	surveil: surveil,
 	return_to_hand: moveToHand,
 	move_to_battlefield: moveToBattlefield,
+	move_to_graveyard: moveToGraveyard,
 };
 export const handleGameAction = async (
 	action: keyof typeof Actions,

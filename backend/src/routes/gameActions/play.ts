@@ -28,3 +28,14 @@ export const moveToBattlefield: ActionMethod = async (
 		await query(updateQuery, params);
 	}
 };
+
+export const moveToGraveyard: ActionMethod = async (_id, _seat, metadata) => {
+	// Move card to graveyard from battlefield or hand
+	const objectId = metadata.objectId;
+	if (objectId) {
+		await query(
+			`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`,
+			[objectId],
+		);
+	}
+};
