@@ -214,6 +214,7 @@ const styles = {
 	},
 };
 const libraryMenuItems = (): MenuItem[] => [
+	{ label: "Search Library", action: "search_library" },
 	{ label: "Shuffle Library", action: "shuffle_library" },
 	{
 		label: "Draw",
@@ -272,19 +273,19 @@ const handMenuItems = (objectId?: string): MenuItem[] => [
 const graveyardMenuItems = (objectId?: string): MenuItem[] => [
 	{
 		label: "Return to Hand",
-		action: "return_to_hand",
+		action: "move_to_hand",
 		metadata: { objectId },
 	},
 	{
 		label: "Return to Library",
-		action: "return_to_library",
+		action: "move_to_library",
 		metadata: { objectId },
 	},
 ];
 const exileMenuItems = (objectId?: string): MenuItem[] => [
 	{
 		label: "Return to Hand",
-		action: "return_to_hand",
+		action: "move_to_hand",
 		metadata: { objectId },
 	},
 ];

@@ -28,22 +28,6 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 	const isComplete =
 		top.length + bottom.length + graveyard.length === cards.length;
 
-	const moveToBottom = (cardId: string) => {
-		setTop(top.filter((id) => id !== cardId));
-		setBottom([...bottom, cardId]);
-	};
-
-	const moveToGraveyard = (cardId: string) => {
-		setTop(top.filter((id) => id !== cardId));
-		setGraveyard([...graveyard, cardId]);
-	};
-
-	const moveToTop = (cardId: string) => {
-		setBottom(bottom.filter((id) => id !== cardId));
-		setGraveyard(graveyard.filter((id) => id !== cardId));
-		setTop([...top, cardId]);
-	};
-
 	const handleConfirm = () => {
 		onConfirm({
 			top,
@@ -52,18 +36,22 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 		});
 	};
 
-	const renderCard = (card: any) => {
+	const renderCard = (
+		card: any,
+		sourceZone?: "top" | "bottom" | "graveyard",
+	) => {
 		const handleDragStart = (e: React.DragEvent) => {
 			e.dataTransfer.effectAllowed = "move";
 			e.dataTransfer.setData(
 				"application/json",
-				JSON.stringify({ cardId: card.id }),
+				JSON.stringify({ cardId: card.id, sourceZone }),
 			);
 		};
 
 		return (
 			<div
 				key={card.id}
+				data-card-id={card.id}
 				style={styles.card}
 				draggable
 				onDragStart={handleDragStart}
@@ -86,6 +74,65 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 				)}
 			</div>
 		);
+	};
+
+	const handleZoneDrop = (
+		e: React.DragEvent,
+		zone: string[],
+		setZone: (zone: string[]) => void,
+		sourceZone: "top" | "bottom" | "graveyard",
+	) => {
+		e.preventDefault();
+		e.stopPropagation();
+		const data = JSON.parse(e.dataTransfer.getData("application/json"));
+
+		if (!data.cardId) return;
+
+		// If dragging from different zone, just add to this zone
+		if (data.sourceZone !== sourceZone) {
+			if (!zone.includes(data.cardId)) {
+				if (data.sourceZone === "top") {
+					setTop(top.filter((id) => id !== data.cardId));
+				} else if (data.sourceZone === "bottom") {
+					setBottom(bottom.filter((id) => id !== data.cardId));
+				} else if (data.sourceZone === "graveyard") {
+					setGraveyard(graveyard.filter((id) => id !== data.cardId));
+				}
+				setZone([...zone, data.cardId]);
+			}
+			return;
+		}
+
+		// Same zone: reorder based on mouse position
+		if (zone.length <= 1) return;
+
+		const zoneElement = e.currentTarget as HTMLElement;
+		const zoneRect = zoneElement.getBoundingClientRect();
+		const dropX = e.clientX - zoneRect.left;
+
+		// Get all card elements
+		const cardElements = Array.from(zoneElement.children) as HTMLElement[];
+		let insertIndex = zone.length;
+
+		// Find which position to insert based on mouse position
+		for (let i = 0; i < cardElements.length; i++) {
+			const cardElement = cardElements[i];
+			const cardRect = cardElement.getBoundingClientRect();
+			const cardCenter =
+				cardRect.left - zoneRect.left + cardRect.width / 2;
+
+			// If drop is before the center of this card, insert at this DOM index
+			if (dropX < cardCenter) {
+				insertIndex = i;
+				break;
+			}
+		}
+
+		// Remove card from old position and insert at new position
+		const filtered = zone.filter((id) => id !== data.cardId);
+		const newZone = [...filtered];
+		newZone.splice(insertIndex, 0, data.cardId);
+		setZone(newZone);
 	};
 
 	return (
@@ -114,22 +161,16 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 								e.preventDefault();
 								e.dataTransfer.dropEffect = "move";
 							}}
-							onDrop={(e) => {
-								e.preventDefault();
-								const data = JSON.parse(
-									e.dataTransfer.getData("application/json"),
-								);
-								if (data.cardId && !top.includes(data.cardId)) {
-									moveToTop(data.cardId);
-								}
-							}}
+							onDrop={(e) =>
+								handleZoneDrop(e, top, setTop, "top")
+							}
 						>
 							{topCards.length === 0 ? (
 								<div style={styles.emptyZone}>
 									Drag cards here
 								</div>
 							) : (
-								topCards.map((card) => renderCard(card))
+								topCards.map((card) => renderCard(card, "top"))
 							)}
 						</div>
 					</div>
@@ -146,27 +187,23 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 									e.preventDefault();
 									e.dataTransfer.dropEffect = "move";
 								}}
-								onDrop={(e) => {
-									e.preventDefault();
-									const data = JSON.parse(
-										e.dataTransfer.getData(
-											"application/json",
-										),
-									);
-									if (
-										data.cardId &&
-										!bottom.includes(data.cardId)
-									) {
-										moveToBottom(data.cardId);
-									}
-								}}
+								onDrop={(e) =>
+									handleZoneDrop(
+										e,
+										bottom,
+										setBottom,
+										"bottom",
+									)
+								}
 							>
 								{bottomCards.length === 0 ? (
 									<div style={styles.emptyZone}>
 										Drag cards here
 									</div>
 								) : (
-									bottomCards.map((card) => renderCard(card))
+									bottomCards.map((card) =>
+										renderCard(card, "bottom"),
+									)
 								)}
 							</div>
 						</div>
@@ -184,20 +221,14 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 									e.preventDefault();
 									e.dataTransfer.dropEffect = "move";
 								}}
-								onDrop={(e) => {
-									e.preventDefault();
-									const data = JSON.parse(
-										e.dataTransfer.getData(
-											"application/json",
-										),
-									);
-									if (
-										data.cardId &&
-										!graveyard.includes(data.cardId)
-									) {
-										moveToGraveyard(data.cardId);
-									}
-								}}
+								onDrop={(e) =>
+									handleZoneDrop(
+										e,
+										graveyard,
+										setGraveyard,
+										"graveyard",
+									)
+								}
 							>
 								{graveyardCards.length === 0 ? (
 									<div style={styles.emptyZone}>
@@ -205,7 +236,7 @@ export const ScryModal: React.FC<ScryModalProps> = ({
 									</div>
 								) : (
 									graveyardCards.map((card) =>
-										renderCard(card),
+										renderCard(card, "graveyard"),
 									)
 								)}
 							</div>
@@ -253,6 +284,7 @@ const styles = {
 		borderRadius: "8px",
 		padding: "20px",
 		maxWidth: "1000px",
+		minWidth: "80vw",
 		maxHeight: "80vh",
 		display: "flex" as const,
 		flexDirection: "column" as const,

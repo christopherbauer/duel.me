@@ -6,6 +6,7 @@ import ContextMenu from "./ContextMenus";
 import { ZoneDisplay, zoneStyles } from "./ZoneDisplay";
 import { ScryModal } from "./ScryModal";
 import { ExileModal } from "./ExileModal";
+import { LibrarySearchModal } from "./LibrarySearchModal";
 
 export const GameBoard: React.FC = () => {
 	const { gameId } = useParams<{ gameId: string }>();
@@ -40,6 +41,9 @@ export const GameBoard: React.FC = () => {
 		cards: any[];
 	} | null>(null);
 	const [exileModal, setExileModal] = useState<any[] | null>(null);
+	const [librarySearchModal, setLibrarySearchModal] = useState<any[] | null>(
+		null,
+	);
 	const battlefieldRef = useRef<HTMLDivElement>(null);
 	const flippedSeatsRef = useRef<Set<number>>(new Set());
 
@@ -56,6 +60,15 @@ export const GameBoard: React.FC = () => {
 	const executeAction = useCallback(
 		async (action: string, metadata?: any) => {
 			if (!gameId) return;
+
+			// Handle Search Library specially - show modal first
+			if (action === "search_library" && gameState) {
+				const library = gameState.objects.filter(
+					(o) => o.zone === "library" && o.seat === viewerSeat,
+				);
+				setLibrarySearchModal(library);
+				return;
+			}
 
 			// Handle Scry and Surveil specially - show modal first
 			if ((action === "scry" || action === "surveil") && gameState) {
@@ -651,6 +664,21 @@ export const GameBoard: React.FC = () => {
 				<ExileModal
 					cards={exileModal}
 					onClose={() => setExileModal(null)}
+				/>
+			)}
+
+			{librarySearchModal && (
+				<LibrarySearchModal
+					cards={librarySearchModal}
+					onClose={() => setLibrarySearchModal(null)}
+					onCloseAndShuffle={() => {
+						executeAction("shuffle_library");
+						setLibrarySearchModal(null);
+					}}
+					onMoveCard={(cardId, zone) => {
+						executeAction(`move_to_${zone}`, { objectId: cardId });
+						// Keep modal open after moving
+					}}
 				/>
 			)}
 
