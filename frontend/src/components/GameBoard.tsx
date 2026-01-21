@@ -739,7 +739,12 @@ interface CardImageProps {
 	counters?: any;
 }
 
-const CardImage: React.FC<CardImageProps> = ({ card, isTapped, scale = 1, counters }) => {
+const CardImage: React.FC<CardImageProps> = ({
+	card,
+	isTapped,
+	scale = 1,
+	counters,
+}) => {
 	const imageUrl =
 		(card && card.image_uris && card.image_uris.normal) ||
 		(card && card.image_uris && card.image_uris.large) ||
@@ -816,7 +821,8 @@ const CardImage: React.FC<CardImageProps> = ({ card, isTapped, scale = 1, counte
 							}}
 							title={`${counter.count} ${counter.label}`}
 						>
-							{counter.count > 1 ? counter.count : ""}{counter.label}
+							{counter.count > 1 ? counter.count : ""}
+							{counter.label}
 						</div>
 					))}
 				</div>

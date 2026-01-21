@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useGameStore } from "../../store";
 
 enum ContextMenuType {
 	Library = "library",
@@ -13,6 +14,8 @@ interface MenuItem {
 	action?: string;
 	metadata?: any;
 	submenu?: MenuItem[];
+	isCounterSection?: boolean;
+	counterItems?: { type: string; label: string; count: number }[];
 }
 
 const typeToMenuItemsMap: (
@@ -100,71 +103,135 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 				}
 			}}
 		>
-			{menuItems.map((item) => (
-				<div
-					key={item.label}
-					onMouseEnter={() =>
-						handleMouseEnter(item.label, !!item.submenu)
-					}
-					onMouseLeave={() => {
-						if (!item.submenu) {
-							handleMouseLeave();
-						}
-					}}
-				>
+			{menuItems.map((item, idx) => {
+				if (item.isCounterSection && item.counterItems) {
+					return (
+						<div key={item.label}>
+							<div style={styles.sectionHeader}>{item.label}</div>
+							{item.counterItems.length === 0 ||
+							item.counterItems.every((c) => c.count === 0) ? (
+								<div style={styles.counterItemEmpty}>
+									No counters
+								</div>
+							) : (
+								item.counterItems
+									.filter((c) => c.count > 0)
+									.map((counter) => (
+										<div
+											key={counter.type}
+											style={styles.counterItem}
+										>
+											<span style={styles.counterLabel}>
+												{counter.label}: {counter.count}
+											</span>
+											<div style={styles.counterButtons}>
+												<button
+													style={styles.counterButton}
+													onClick={(e) => {
+														e.stopPropagation();
+														executeAction(
+															"add_counter",
+															{
+																objectId,
+																counterType:
+																	counter.type,
+															},
+														);
+													}}
+												>
+													+
+												</button>
+												<button
+													style={styles.counterButton}
+													onClick={(e) => {
+														e.stopPropagation();
+														executeAction(
+															"remove_counter",
+															{
+																objectId,
+																counterType:
+																	counter.type,
+															},
+														);
+													}}
+												>
+													−
+												</button>
+											</div>
+										</div>
+									))
+							)}
+						</div>
+					);
+				}
+
+				return (
 					<div
-						style={{
-							...styles.contextMenuItem,
-							backgroundColor:
-								hoveredItem === item.label
-									? "#444"
-									: "transparent",
-							paddingRight: item.submenu ? "20px" : "12px",
+						key={item.label}
+						onMouseEnter={() =>
+							handleMouseEnter(item.label, !!item.submenu)
+						}
+						onMouseLeave={() => {
+							if (!item.submenu) {
+								handleMouseLeave();
+							}
 						}}
-						onClick={() => handleMenuItemClick(item)}
 					>
-						{item.label}
-						{item.submenu && (
-							<span style={styles.submenuArrow}>›</span>
+						<div
+							style={{
+								...styles.contextMenuItem,
+								backgroundColor:
+									hoveredItem === item.label
+										? "#444"
+										: "transparent",
+								paddingRight: item.submenu ? "20px" : "12px",
+							}}
+							onClick={() => handleMenuItemClick(item)}
+						>
+							{item.label}
+							{item.submenu && (
+								<span style={styles.submenuArrow}>›</span>
+							)}
+						</div>
+
+						{item.submenu && hoveredSubmenu === item.label && (
+							<div style={styles.submenu}>
+								{item.submenu.map((subitem) => (
+									<div
+										key={subitem.label}
+										style={{
+											...styles.contextMenuItem,
+											borderBottom:
+												subitem ===
+												item.submenu![
+													item.submenu!.length - 1
+												]
+													? "none"
+													: "1px solid #444",
+										}}
+										onClick={() => {
+											handleMenuItemClick(subitem);
+										}}
+										onMouseEnter={(e) => {
+											(
+												e.currentTarget as HTMLElement
+											).style.backgroundColor = "#444";
+										}}
+										onMouseLeave={(e) => {
+											(
+												e.currentTarget as HTMLElement
+											).style.backgroundColor =
+												"transparent";
+										}}
+									>
+										{subitem.label}
+									</div>
+								))}
+							</div>
 						)}
 					</div>
-
-					{item.submenu && hoveredSubmenu === item.label && (
-						<div style={styles.submenu}>
-							{item.submenu.map((subitem) => (
-								<div
-									key={subitem.label}
-									style={{
-										...styles.contextMenuItem,
-										borderBottom:
-											subitem ===
-											item.submenu![
-												item.submenu!.length - 1
-											]
-												? "none"
-												: "1px solid #444",
-									}}
-									onClick={() => {
-										handleMenuItemClick(subitem);
-									}}
-									onMouseEnter={(e) => {
-										(
-											e.currentTarget as HTMLElement
-										).style.backgroundColor = "#444";
-									}}
-									onMouseLeave={(e) => {
-										(
-											e.currentTarget as HTMLElement
-										).style.backgroundColor = "transparent";
-									}}
-								>
-									{subitem.label}
-								</div>
-							))}
-						</div>
-					)}
-				</div>
-			))}
+				);
+			})}
 		</div>
 	);
 };
@@ -211,6 +278,47 @@ const styles = {
 		fontSize: "14px",
 		color: "#888",
 		marginLeft: "8px",
+	},
+	sectionHeader: {
+		padding: "6px 12px",
+		fontSize: "11px",
+		color: "#999",
+		textTransform: "uppercase" as const,
+		fontWeight: "bold" as const,
+		letterSpacing: "0.5px",
+		borderBottom: "1px solid #444",
+	},
+	counterItem: {
+		display: "flex" as const,
+		justifyContent: "space-between" as const,
+		alignItems: "center" as const,
+		padding: "6px 12px",
+		fontSize: "12px",
+		borderBottom: "1px solid #444",
+	},
+	counterItemEmpty: {
+		padding: "6px 12px",
+		fontSize: "12px",
+		color: "#666",
+		fontStyle: "italic" as const,
+	},
+	counterLabel: {
+		color: "#fff",
+	},
+	counterButtons: {
+		display: "flex" as const,
+		gap: "4px",
+	},
+	counterButton: {
+		backgroundColor: "#0066ff",
+		color: "#fff",
+		border: "none",
+		borderRadius: "3px",
+		padding: "2px 6px",
+		cursor: "pointer",
+		fontSize: "10px",
+		fontWeight: "bold" as const,
+		transition: "background-color 0.2s",
 	},
 };
 const libraryMenuItems = (): MenuItem[] => [
@@ -289,71 +397,68 @@ const exileMenuItems = (objectId?: string): MenuItem[] => [
 		metadata: { objectId },
 	},
 ];
-const battlefieldMenuItems = (objectId?: string): MenuItem[] => [
-	{
-		label: "Tap/Untap",
-		action: "toggle_tap",
-		metadata: { objectId },
-	},
-	{
-		label: "Add Counter",
-		submenu: [
-			{
-				label: "+1/+1",
+const battlefieldMenuItems = (objectId?: string): MenuItem[] => {
+	// Get counters for this object from the store
+	const gameState = useGameStore.getState().gameState;
+	if (!gameState) return [];
+	const obj = gameState?.objects.find((o) => o.id === objectId);
+	const counters = obj?.counters || {};
+	const counterTypes = [
+		{ type: "plus_one_plus_one", label: "+1/+1" },
+		{ type: "minus_one_minus_one", label: "-1/-1" },
+		{ type: "charge", label: "Charge" },
+		{ type: "generic", label: "Generic" },
+	];
+
+	// Build counter items for the counters section
+	const counterDisplayItems = counterTypes.map((ct) => ({
+		type: ct.type,
+		label: ct.label,
+		count: counters[ct.type] || 0,
+	}));
+
+	return [
+		{
+			label: "Tap/Untap",
+			action: "toggle_tap",
+			metadata: { objectId },
+		},
+		{
+			label: "Counters",
+			isCounterSection: true,
+			counterItems: counterDisplayItems,
+		},
+		{
+			label: "Add Counter",
+			submenu: counterTypes.map((ct) => ({
+				label: ct.label,
 				action: "add_counter",
-				metadata: { objectId, counterType: "plus_one_plus_one" },
-			},
-			{
-				label: "-1/-1",
-				action: "add_counter",
-				metadata: { objectId, counterType: "minus_one_minus_one" },
-			},
-			{
-				label: "Charge",
-				action: "add_counter",
-				metadata: { objectId, counterType: "charge" },
-			},
-			{
-				label: "Generic",
-				action: "add_counter",
-				metadata: { objectId, counterType: "generic" },
-			},
-		],
-	},
-	{
-		label: "Remove Counter",
-		submenu: [
-			{
-				label: "+1/+1",
+				metadata: { objectId, counterType: ct.type },
+			})),
+		},
+		{
+			label: "Remove Counter",
+			submenu: counterTypes.map((ct) => ({
+				label: ct.label,
 				action: "remove_counter",
-				metadata: { objectId, counterType: "plus_one_plus_one" },
-			},
-			{
-				label: "-1/-1",
-				action: "remove_counter",
-				metadata: { objectId, counterType: "minus_one_minus_one" },
-			},
-			{
-				label: "Charge",
-				action: "remove_counter",
-				metadata: { objectId, counterType: "charge" },
-			},
-			{
-				label: "Generic",
-				action: "remove_counter",
-				metadata: { objectId, counterType: "generic" },
-			},
-		],
-	},
-	{
-		label: "Move to Graveyard",
-		action: "move_to_graveyard",
-		metadata: { objectId },
-	},
-	{
-		label: "Exile",
-		action: "move_to_exile",
-		metadata: { objectId },
-	},
-];
+				metadata: { objectId, counterType: ct.type },
+			})),
+		},
+		{
+			label: "Move to Hand",
+			action: "move_to_hand",
+			metadata: { objectId },
+		},
+		{
+			label: "Move to Graveyard",
+			action: "move_to_graveyard",
+			metadata: { objectId },
+		},
+		{
+			label: "Exile",
+			action: "move_to_exile",
+			metadata: { objectId },
+		},
+	];
+};
 export default ContextMenu;
