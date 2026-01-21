@@ -17,3 +17,4 @@ coverage/
 out/
 postgres_data/
 log/
+logs/
