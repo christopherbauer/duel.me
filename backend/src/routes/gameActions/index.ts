@@ -7,6 +7,7 @@ import { moveToHand } from "./hand";
 import { moveToBattlefield, moveToGraveyard } from "./play";
 import { ActionMethod } from "./types";
 import { query } from "../../db/pool";
+import { addCounter, removeCounter } from "./counters";
 
 enum Actions {
 	tap,
@@ -23,6 +24,8 @@ enum Actions {
 	move_to_battlefield,
 	move_to_graveyard,
 	discard,
+	add_counter,
+	remove_counter,
 }
 
 const actionMap: Record<keyof typeof Actions, ActionMethod> = {
@@ -40,6 +43,8 @@ const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	move_to_battlefield: moveToBattlefield,
 	move_to_graveyard: moveToGraveyard,
 	discard: moveToGraveyard,
+	add_counter: addCounter,
+	remove_counter: removeCounter,
 };
 export const handleGameAction = async (
 	action: keyof typeof Actions,

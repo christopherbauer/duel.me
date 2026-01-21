@@ -296,6 +296,56 @@ const battlefieldMenuItems = (objectId?: string): MenuItem[] => [
 		metadata: { objectId },
 	},
 	{
+		label: "Add Counter",
+		submenu: [
+			{
+				label: "+1/+1",
+				action: "add_counter",
+				metadata: { objectId, counterType: "plus_one_plus_one" },
+			},
+			{
+				label: "-1/-1",
+				action: "add_counter",
+				metadata: { objectId, counterType: "minus_one_minus_one" },
+			},
+			{
+				label: "Charge",
+				action: "add_counter",
+				metadata: { objectId, counterType: "charge" },
+			},
+			{
+				label: "Generic",
+				action: "add_counter",
+				metadata: { objectId, counterType: "generic" },
+			},
+		],
+	},
+	{
+		label: "Remove Counter",
+		submenu: [
+			{
+				label: "+1/+1",
+				action: "remove_counter",
+				metadata: { objectId, counterType: "plus_one_plus_one" },
+			},
+			{
+				label: "-1/-1",
+				action: "remove_counter",
+				metadata: { objectId, counterType: "minus_one_minus_one" },
+			},
+			{
+				label: "Charge",
+				action: "remove_counter",
+				metadata: { objectId, counterType: "charge" },
+			},
+			{
+				label: "Generic",
+				action: "remove_counter",
+				metadata: { objectId, counterType: "generic" },
+			},
+		],
+	},
+	{
 		label: "Move to Graveyard",
 		action: "move_to_graveyard",
 		metadata: { objectId },

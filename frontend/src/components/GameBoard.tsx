@@ -59,10 +59,49 @@ export const GameBoard: React.FC = () => {
 
 	const executeAction = useCallback(
 		async (action: string, metadata?: any) => {
-			if (!gameId) return;
+			if (!gameId || !gameState) return;
+
+			// Handle counter actions specially - update local state
+			if (action === "add_counter" || action === "remove_counter") {
+				const objectId = metadata?.objectId;
+				const counterType = metadata?.counterType;
+				if (!objectId || !counterType) return;
+
+				const updatedObjects = gameState.objects.map((obj) => {
+					if (obj.id === objectId) {
+						const currentCount = obj.counters[counterType] || 0;
+						const newCount =
+							action === "add_counter"
+								? currentCount + 1
+								: Math.max(0, currentCount - 1);
+						return {
+							...obj,
+							counters: {
+								...obj.counters,
+								[counterType]: newCount,
+							},
+						};
+					}
+					return obj;
+				});
+
+				setGameState({ ...gameState, objects: updatedObjects });
+
+				// Also send to server
+				try {
+					await api.executeAction(gameId, {
+						seat: viewerSeat,
+						action_type: action,
+						metadata,
+					});
+				} catch (err) {
+					console.error("Counter action failed:", err);
+				}
+				return;
+			}
 
 			// Handle Search Library specially - show modal first
-			if (action === "search_library" && gameState) {
+			if (action === "search_library") {
 				const library = gameState.objects.filter(
 					(o) => o.zone === "library" && o.seat === viewerSeat,
 				);
@@ -71,7 +110,7 @@ export const GameBoard: React.FC = () => {
 			}
 
 			// Handle Scry and Surveil specially - show modal first
-			if ((action === "scry" || action === "surveil") && gameState) {
+			if (action === "scry" || action === "surveil") {
 				const count = (metadata && metadata.count) || 1;
 				const library = gameState.objects.filter(
 					(o) => o.zone === "library" && o.seat === viewerSeat,
@@ -97,7 +136,7 @@ export const GameBoard: React.FC = () => {
 				console.error("Action failed:", err);
 			}
 		},
-		[gameId, viewerSeat, loadGameState, gameState],
+		[gameId, viewerSeat, loadGameState, gameState, setGameState],
 	);
 
 	const handleScryConfirm = useCallback(
@@ -427,6 +466,7 @@ export const GameBoard: React.FC = () => {
 												card={obj.card}
 												isTapped={obj.is_tapped}
 												scale={0.4}
+												counters={obj.counters}
 											/>
 										</div>
 									))}
@@ -514,6 +554,7 @@ export const GameBoard: React.FC = () => {
 										card={obj.card}
 										isTapped={obj.is_tapped}
 										scale={cardScale}
+										counters={obj.counters}
 									/>
 								</div>
 							))}
@@ -538,6 +579,7 @@ export const GameBoard: React.FC = () => {
 											card={hoveredCard.card}
 											isTapped={hoveredCard.is_tapped}
 											scale={2}
+											counters={hoveredCard.counters}
 										/>
 									</div>
 								)
@@ -694,9 +736,10 @@ interface CardImageProps {
 	card?: Card | null | undefined;
 	isTapped?: boolean;
 	scale?: number;
+	counters?: any;
 }
 
-const CardImage: React.FC<CardImageProps> = ({ card, isTapped, scale = 1 }) => {
+const CardImage: React.FC<CardImageProps> = ({ card, isTapped, scale = 1, counters }) => {
 	const imageUrl =
 		(card && card.image_uris && card.image_uris.normal) ||
 		(card && card.image_uris && card.image_uris.large) ||
@@ -705,6 +748,18 @@ const CardImage: React.FC<CardImageProps> = ({ card, isTapped, scale = 1 }) => {
 	const cardWidth = 120 * scale;
 	const cardHeight = 170 * scale;
 
+	const counterDisplay = [
+		{ type: "plus_one_plus_one", label: "+1/+1", color: "#00ff00" },
+		{ type: "minus_one_minus_one", label: "-1/-1", color: "#ff0000" },
+		{ type: "charge", label: "⚡", color: "#ffff00" },
+		{ type: "generic", label: "◆", color: "#cccccc" },
+	]
+		.filter((counter) => counters && counters[counter.type] > 0)
+		.map((counter) => ({
+			...counter,
+			count: counters[counter.type],
+		}));
+
 	return (
 		<div
 			style={{
@@ -712,6 +767,7 @@ const CardImage: React.FC<CardImageProps> = ({ card, isTapped, scale = 1 }) => {
 				width: `${cardWidth}px`,
 				height: `${cardHeight}px`,
 				transform: isTapped ? "rotate(90deg)" : "rotate(0deg)",
+				position: "relative" as const,
 			}}
 		>
 			{imageUrl ? (
@@ -749,6 +805,22 @@ const CardImage: React.FC<CardImageProps> = ({ card, isTapped, scale = 1 }) => {
 				</div>
 			)}
 			{isTapped && <div style={styles.tappedLabel}>TAP</div>}
+			{counterDisplay.length > 0 && (
+				<div style={styles.counterContainer}>
+					{counterDisplay.map((counter, idx) => (
+						<div
+							key={idx}
+							style={{
+								...styles.counter,
+								backgroundColor: counter.color,
+							}}
+							title={`${counter.count} ${counter.label}`}
+						>
+							{counter.count > 1 ? counter.count : ""}{counter.label}
+						</div>
+					))}
+				</div>
+			)}
 		</div>
 	);
 };
@@ -1051,6 +1123,29 @@ const styles = {
 		fontWeight: "bold" as const,
 		borderRadius: "4px",
 		pointerEvents: "none" as const,
+	},
+	counterContainer: {
+		position: "absolute" as const,
+		bottom: "4px",
+		left: "4px",
+		display: "flex" as const,
+		gap: "2px",
+		flexWrap: "wrap" as const,
+		maxWidth: "80px",
+		pointerEvents: "none" as const,
+	},
+	counter: {
+		padding: "2px 4px",
+		borderRadius: "3px",
+		fontSize: "9px",
+		fontWeight: "bold" as const,
+		color: "#000",
+		display: "flex" as const,
+		alignItems: "center" as const,
+		gap: "2px",
+		minWidth: "20px",
+		justifyContent: "center" as const,
+		textShadow: "0 0 2px rgba(255, 255, 255, 0.5)",
 	},
 	zoneGrid: {
 		display: "grid",

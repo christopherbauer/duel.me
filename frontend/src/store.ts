@@ -68,7 +68,12 @@ export enum Layout {
 	Normal = "normal",
 }
 
-export interface Counters {}
+export interface Counters {
+	plus_one_plus_one?: number;
+	minus_one_minus_one?: number;
+	charge?: number;
+	generic?: number;
+}
 
 export interface Position {
 	x: number;
