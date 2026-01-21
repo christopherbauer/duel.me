@@ -505,42 +505,35 @@ const backgroundTokenMenuItems = (availableTokens: Card[]): MenuItem[] => {
 	}
 
 	return [
-		{
-			label: "Create Token",
-			submenu: availableTokens.map((token) => {
-				// Build display label with power/toughness if available
-				const displayLabel =
-					token.power && token.toughness
-						? `${token.name} - ${token.power}/${token.toughness}`
-						: token.name;
+		...availableTokens.flatMap((token) => {
+			const displayLabel =
+				token.power && token.toughness
+					? `${token.name} - ${token.power}/${token.toughness}`
+					: token.name;
 
-				return {
-					label: displayLabel,
-					submenu: [
-						{
-							label: "1",
-							action: "create_token_copy",
-							metadata: { tokenCardId: token.id, quantity: 1 },
-						},
-						{
-							label: "2",
-							action: "create_token_copy",
-							metadata: { tokenCardId: token.id, quantity: 2 },
-						},
-						{
-							label: "3",
-							action: "create_token_copy",
-							metadata: { tokenCardId: token.id, quantity: 3 },
-						},
-						{
-							label: "4",
-							action: "create_token_copy",
-							metadata: { tokenCardId: token.id, quantity: 4 },
-						},
-					],
-				};
-			}),
-		},
+			return [
+				{
+					label: `Create 1 ${displayLabel}`,
+					action: "create_token_copy",
+					metadata: { tokenCardId: token.id, quantity: 1 },
+				},
+				{
+					label: `Create 2 ${displayLabel}`,
+					action: "create_token_copy",
+					metadata: { tokenCardId: token.id, quantity: 2 },
+				},
+				{
+					label: `Create 3 ${displayLabel}`,
+					action: "create_token_copy",
+					metadata: { tokenCardId: token.id, quantity: 3 },
+				},
+				{
+					label: `Create 4 ${displayLabel}`,
+					action: "create_token_copy",
+					metadata: { tokenCardId: token.id, quantity: 4 },
+				},
+			];
+		}),
 	];
 };
 export default ContextMenu;

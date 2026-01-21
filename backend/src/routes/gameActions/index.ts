@@ -59,6 +59,9 @@ export const handleGameAction = async (
 	seat: number,
 	metadata: any,
 ) => {
+	console.log(`handleGameAction called with action: ${String(action)}`);
+	console.log(`actionMap keys:`, Object.keys(actionMap));
+	console.log(`action in actionMap:`, action in actionMap);
 	const result = await actionMap[action](id, seat, metadata);
 	await query(`UPDATE game_sessions SET updated_at = NOW() WHERE id = $1`, [
 		id,

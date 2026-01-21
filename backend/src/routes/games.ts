@@ -304,6 +304,10 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 			.json({ error: "seat and action_type are required" });
 	}
 
+	logger.info(
+		`Received action: ${action_type} with metadata: ${JSON.stringify(metadata)}`,
+	);
+
 	try {
 		const actionId = uuidv4();
 

@@ -1,6 +1,7 @@
 import { query } from "../../core/pool";
 import { ActionMethod } from "./types";
 import { v4 as uuidv4 } from "uuid";
+import logger from "../../core/logger";
 
 interface SourceCardResult {
 	card_id: string;
@@ -20,6 +21,9 @@ export const createTokenCopy: ActionMethod = async (
 		position?: { x: number; y: number };
 	},
 ) => {
+	logger.info(
+		`Creating token copy with metadata: ${JSON.stringify(metadata)}`,
+	);
 	const { sourceObjectId, tokenCardId, quantity, position } = metadata;
 
 	if (!tokenCardId && !sourceObjectId) {
