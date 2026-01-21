@@ -260,9 +260,6 @@ const styles = {
 		justifyContent: "space-between",
 		alignItems: "center",
 		userSelect: "none" as const,
-		":hover": {
-			backgroundColor: "#444",
-		},
 	},
 	submenu: {
 		position: "absolute" as const,
