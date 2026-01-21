@@ -12,6 +12,7 @@ import { addCounter, removeCounter } from "./counters";
 enum Actions {
 	tap,
 	untap,
+	toggle_tap,
 	shuffle_library,
 	draw,
 	life_change,
@@ -31,6 +32,7 @@ enum Actions {
 const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	tap: tap,
 	untap: untap,
+	toggle_tap: toggle_tap,
 	shuffle_library: shuffleLibrary,
 	draw: drawFromLibrary,
 	life_change: lifeChange,

@@ -2,8 +2,8 @@ import { AllPart } from "../seed/types";
 
 export type CardId = Pick<Card, "id">;
 export type CommanderIds = Pick<Deck, "commander_ids">;
-export type DeckCards = Exclude<DeckCard, "deck_id" | "zone">;
-export type DeckDetails = Exclude<DeckCard, "deck_id" | "card_id"> &
+export type DeckCards = Omit<DeckCard, "deck_id" | "zone">;
+export type DeckDetails = Omit<DeckCard, "deck_id" | "card_id"> &
 	Pick<
 		Card,
 		"id" | "name" | "type_line" | "mana_cost" | "colors" | "image_uris"
@@ -64,7 +64,7 @@ export interface GameSession {
 	completed_at?: string;
 }
 
-export type GameStateQueryResult = Exclude<
+export type GameStateQueryResult = Omit<
 	GameObject,
 	"game_session_id" | "attachments" | "created_at" | "updated_at"
 > &
