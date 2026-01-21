@@ -1,5 +1,5 @@
 import express, { Router } from "express";
-import { query } from "../db/pool";
+import { query } from "../core/pool";
 import { v4 as uuidv4 } from "uuid";
 import { Card } from "../types/game";
 
@@ -45,7 +45,7 @@ router.get("/search", async (req, res) => {
        FROM cards 
        WHERE name ILIKE $1 
        LIMIT $2`,
-			[`${q}%`, Math.min(parseInt(limit as string) || 20, 100)]
+			[`${q}%`, Math.min(parseInt(limit as string) || 20, 100)],
 		);
 		res.json(result?.rows);
 	} catch (error) {

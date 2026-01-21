@@ -1,5 +1,5 @@
 import logger from "../../core/logger";
-import { query } from "../../db/pool";
+import { query } from "../../core/pool";
 
 const getRandom = (low: number, high: number) =>
 	Math.floor(Math.random() * (high - low + 1)) + low;

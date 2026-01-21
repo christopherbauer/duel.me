@@ -1,4 +1,4 @@
-import { query } from "../../db/pool";
+import { query } from "../../core/pool";
 import { ActionMethod } from "./types";
 
 export const moveToHand: ActionMethod = async (_id, _seat, metadata) => {

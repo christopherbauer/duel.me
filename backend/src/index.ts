@@ -3,12 +3,12 @@ import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import swaggerJsdoc from "swagger-jsdoc";
 import { migrate } from "./migrations/migrate";
-import { query, closePool } from "./db/pool";
+import { query, closePool } from "./core/pool";
 import cardsRouter from "./routes/cards";
 import decksRouter from "./routes/decks";
 import gamesRouter from "./routes/games";
 import logger from "./core/logger";
-import { requestLogHandler } from "./core/requestLogHandler";
+import { requestLogHandler } from "./core/middlewares/requestLogHandler";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -56,11 +56,11 @@ app.use(
 		err: any,
 		req: express.Request,
 		res: express.Response,
-		next: express.NextFunction
+		next: express.NextFunction,
 	) => {
 		console.error("Unhandled error:", err);
 		res.status(500).json({ error: "Internal server error" });
-	}
+	},
 );
 
 // Graceful shutdown
@@ -80,7 +80,7 @@ async function main() {
 		app.listen(PORT, () => {
 			logger.info(`Server running on port ${PORT}`);
 			logger.info(
-				`Swagger docs available at http://localhost:${PORT}/api-docs`
+				`Swagger docs available at http://localhost:${PORT}/api-docs`,
 			);
 		});
 	} catch (error) {

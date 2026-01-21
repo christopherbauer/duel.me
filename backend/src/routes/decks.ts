@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { query } from "../db/pool";
+import { query } from "../core/pool";
 import { v4 as uuidv4 } from "uuid";
 import { Card, CardId, Deck, DeckCard, DeckDetails } from "../types/game";
 

@@ -1,5 +1,5 @@
 import logger from "../../core/logger";
-import { query } from "../../db/pool";
+import { query } from "../../core/pool";
 import { GameObjectId } from "../../types/game";
 import { ActionMethod } from "./types";
 

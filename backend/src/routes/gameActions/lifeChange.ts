@@ -1,4 +1,4 @@
-import { query } from "../../db/pool";
+import { query } from "../../core/pool";
 
 export const lifeChange = async (
 	id: string,

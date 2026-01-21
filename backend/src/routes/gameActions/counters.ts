@@ -1,4 +1,4 @@
-import { query } from "../../db/pool";
+import { query } from "../../core/pool";
 import { ActionMethod } from "./types";
 enum CounterTypes {
 	plus_one_plus_one = "plus_one_plus_one",

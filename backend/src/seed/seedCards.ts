@@ -1,7 +1,7 @@
 import { createReadStream } from "fs";
 import { createInterface } from "readline";
 import https from "https";
-import { query } from "../db/pool";
+import { query } from "../core/pool";
 import crypto from "crypto";
 import {
 	AppCard,
@@ -33,7 +33,7 @@ async function getLatestBulkUrl(): Promise<string> {
 					try {
 						const json = JSON.parse(data) as BulkDataResponse;
 						const oracleCards = json.data?.find(
-							(item) => item.type === "oracle_cards"
+							(item) => item.type === "oracle_cards",
 						);
 						if (oracleCards && oracleCards.download_uri) {
 							resolve(oracleCards.download_uri);
@@ -41,9 +41,9 @@ async function getLatestBulkUrl(): Promise<string> {
 							reject(
 								new Error(
 									`Oracle cards not found in bulk data. Got: ${JSON.stringify(
-										json
-									).substring(0, 200)}`
-								)
+										json,
+									).substring(0, 200)}`,
+								),
 							);
 						}
 					} catch (e) {
@@ -84,7 +84,7 @@ async function downloadAndSeedCards() {
 
 			if (!response || response.statusCode !== 200) {
 				return reject(
-					new Error(`Failed to download: ${response?.statusCode}`)
+					new Error(`Failed to download: ${response?.statusCode}`),
 				);
 			}
 
@@ -136,14 +136,14 @@ async function downloadAndSeedCards() {
 									`Processed ${cardCount} cards... (Memory: ${Math.round(
 										process.memoryUsage().heapUsed /
 											1024 /
-											1024
-									)}MB)`
+											1024,
+									)}MB)`,
 								);
 								response.resume();
 							}
 						} catch (error) {
 							logger.error(
-								`Line parse error (skipping) L${line}`
+								`Line parse error (skipping) L${line}`,
 							);
 							logger.catchError(error);
 						}
@@ -162,7 +162,7 @@ async function downloadAndSeedCards() {
 					await query(
 						`INSERT INTO card_snapshots (dataset_type, source_url, checksum, total_cards)
              VALUES ('scryfall', $1, $2, $3)`,
-						[SCRYFALL_BULK_URL, checksum, cardCount]
+						[SCRYFALL_BULK_URL, checksum, cardCount],
 					);
 
 					logger.info(`✓ Imported ${cardCount} cards successfully`);

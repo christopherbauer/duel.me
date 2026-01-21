@@ -1,5 +1,5 @@
 import logger from "../core/logger";
-import { query } from "../db/pool";
+import { query } from "../core/pool";
 import { migrations } from "./scripts";
 
 export async function migrate() {

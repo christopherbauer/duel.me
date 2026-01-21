@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { query } from "../db/pool";
+import { query } from "../core/pool";
 import { v4 as uuidv4 } from "uuid";
 import {
 	GameSession,
@@ -12,6 +12,9 @@ import {
 } from "../types/game";
 import logger from "../core/logger";
 import { handleGameAction } from "./gameActions";
+import GamesStore from "../db/games";
+import GameStateStore from "../db/gameState";
+import { AllPartsQueryResult } from "../db/types";
 
 const router = Router();
 //in-memory store tokens for inclusion in gamestate responses
@@ -180,63 +183,29 @@ router.get("/:id", async (req, res) => {
 		1) as 1 | 2;
 
 	try {
-		// Get game state
-		const stateResult = await query<GameState>(
-			"SELECT * FROM game_state WHERE game_session_id = $1",
-			[id],
-		);
-		if (stateResult && stateResult.rows && stateResult.rows.length === 0) {
-			return res.status(404).json({ error: "Game not found" });
-		}
-		const gameState = stateResult?.rows[0];
-		if (!gameState) {
+		const gameStateResult = await GameStateStore().getGameState(id);
+		if (!gameStateResult) {
 			throw new Error("Failed to retrieve game state");
 		}
 
-		// Get all objects
-		const objectsResult = await query<GameStateQueryResult>(
-			`SELECT go.id, go.seat, go.zone, go.card_id, go.is_token, go.is_tapped, go.is_flipped, 
-			go.counters, go.notes, go.position, go."order",
-			c.id as card_id, c."name", c.type_line, c.oracle_text, c.mana_cost, c.cmc, c.power, c.toughness, c.colors, c.color_identity, c.keywords, c.layout, c.image_uris
-       FROM game_objects go
-       LEFT JOIN cards c ON go.card_id = c.id
-       WHERE go.game_session_id = $1
-       ORDER BY go.zone, go."order", go.created_at`,
-			[id],
-		);
-
-		logger.debug(JSON.stringify(objectsResult?.rows));
-		// const extractTokens = (objects: GameStateQueryResult[]) => {
-		// 	const tokens: Record<string, { id: string; name: string }> = {};
-		// 	for (const obj of objects) {
-		// 		if (obj.all_parts && obj.all_parts.length > 0) {
-		// 			for (const part of obj.all_parts) {
-		// 				if (part.component === "token" && part.name) {
-		// 					tokens[part.id] = {
-		// 						id: part.id,
-		// 						name: part.name,
-		// 					};
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// 	return tokens;
-		// };
-		// const gameTokenList = extractTokens(objectsResult?.rows || []);
-		// const gameTokens = Object.values(gameTokenList).map((tokenInfo) => {
-		// 	const tokenCard = tokenRecord[tokenInfo.name];
-		// 	if (tokenCard) {
-		// 		return tokenCard;
-		// 	} else {
-		// 		logger.warn(
-		// 			`Token card not found for token name: ${tokenInfo.name}`,
-		// 		);
-		// 		return null;
-		// 	}
-		// });
+		// Get game state
+		const objectsResult = await GamesStore()
+			.getGamesObjects(id)
+			.then((result) => {
+				if (!result) {
+					throw new Error("Failed to retrieve game objects");
+				}
+				return result;
+			})
+			.catch((err) => {
+				logger.error(err);
+				res.status(404).json({ error: "Game not found" });
+				throw new Error("Failed to retrieve game objects");
+			});
+		logger.debug(JSON.stringify(objectsResult));
 
 		// Project visibility: hide opponent's hand and library
-		const projectedObjects = objectsResult?.rows.map((obj) => {
+		const projectedObjects = objectsResult.map((obj) => {
 			const isOpponent = obj.seat !== viewerSeat;
 			const isHiddenZone = obj.zone === "hand" || obj.zone === "library";
 
@@ -278,13 +247,13 @@ router.get("/:id", async (req, res) => {
 				.json({ error: "Failed to project game objects" });
 		}
 		const view: GameStateView = {
-			game_session_id: gameState.game_session_id,
-			seat1_life: gameState.seat1_life,
-			seat2_life: gameState.seat2_life,
-			seat1_commander_damage: gameState.seat1_commander_damage,
-			seat2_commander_damage: gameState.seat2_commander_damage,
-			active_seat: gameState.active_seat,
-			turn_number: gameState.turn_number,
+			game_session_id: gameStateResult.game_session_id,
+			seat1_life: gameStateResult.seat1_life,
+			seat2_life: gameStateResult.seat2_life,
+			seat1_commander_damage: gameStateResult.seat1_commander_damage,
+			seat2_commander_damage: gameStateResult.seat2_commander_damage,
+			active_seat: gameStateResult.active_seat,
+			turn_number: gameStateResult.turn_number,
 			objects: projectedObjects,
 		};
 
@@ -359,6 +328,40 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 		console.error("Game action error:", error);
 		res.status(500).json({ error: "Failed to execute action" });
 	}
+});
+
+router.get("/:id/tokens", async (req, res) => {
+	const { id } = req.params;
+	const extractTokens = (objects: AllPartsQueryResult[]) => {
+		const tokens: Record<string, { id: string; name: string }> = {};
+		for (const obj of objects) {
+			if (obj.all_parts && obj.all_parts.length > 0) {
+				for (const part of obj.all_parts) {
+					if (part.component === "token" && part.name) {
+						tokens[part.id] = {
+							id: part.id,
+							name: part.name,
+						};
+					}
+				}
+			}
+		}
+		return tokens;
+	};
+	const allPartsResult = await GamesStore().getAllParts(id);
+	const gameTokenList = extractTokens(allPartsResult || []);
+	const gameTokens = Object.values(gameTokenList).map((tokenInfo) => {
+		const tokenCard = tokenRecord[tokenInfo.name];
+		if (tokenCard) {
+			return tokenCard;
+		} else {
+			logger.warn(
+				`Token card not found for token name: ${tokenInfo.name}`,
+			);
+			return null;
+		}
+	});
+	res.json(gameTokens);
 });
 
 export default router;

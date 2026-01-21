@@ -6,7 +6,7 @@ import { exileTopFromLibrary, moveToExile } from "./exile";
 import { moveToHand } from "./hand";
 import { moveToBattlefield, moveToGraveyard } from "./play";
 import { ActionMethod } from "./types";
-import { query } from "../../db/pool";
+import { query } from "../../core/pool";
 import { addCounter, removeCounter } from "./counters";
 
 enum Actions {
