@@ -1,11 +1,47 @@
-import React from "react";
+import React, { useState } from "react";
 
 interface ExileModalProps {
 	cards: any[];
+	onMoveCard: (
+		cardId: string,
+		zone: "hand" | "library" | "graveyard" | "exile",
+	) => void;
 	onClose: () => void;
 }
 
-export const ExileModal: React.FC<ExileModalProps> = ({ cards, onClose }) => {
+interface ContextMenu {
+	x: number;
+	y: number;
+	cardId: string;
+}
+export const ExileModal: React.FC<ExileModalProps> = ({
+	cards,
+	onMoveCard,
+	onClose,
+}) => {
+	const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+
+	const handleCardContextMenu = (e: React.MouseEvent, cardId: string) => {
+		e.preventDefault();
+		setContextMenu({ x: e.clientX, y: e.clientY, cardId });
+	};
+
+	const handleMoveCard = (
+		zone: "hand" | "library" | "graveyard" | "exile",
+	) => {
+		if (contextMenu) {
+			onMoveCard(contextMenu.cardId, zone);
+			setContextMenu(null);
+		}
+	};
+	React.useEffect(() => {
+		const handleClickOutside = () => {
+			setContextMenu(null);
+		};
+		window.addEventListener("click", handleClickOutside);
+		return () => window.removeEventListener("click", handleClickOutside);
+	}, []);
+
 	return (
 		<div style={styles.overlay} onClick={onClose}>
 			<div style={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -26,7 +62,13 @@ export const ExileModal: React.FC<ExileModalProps> = ({ cards, onClose }) => {
 								? card.card.image_uris.normal
 								: null;
 						return (
-							<div key={card.id} style={styles.cardContainer}>
+							<div
+								key={card.id}
+								style={styles.cardContainer}
+								onContextMenu={(e) =>
+									handleCardContextMenu(e, card.id)
+								}
+							>
 								{imageUrl ? (
 									<img
 										src={imageUrl}
@@ -49,12 +91,75 @@ export const ExileModal: React.FC<ExileModalProps> = ({ cards, onClose }) => {
 						);
 					})}
 				</div>
+
+				{contextMenu && (
+					<div
+						style={{
+							...styles.contextMenu,
+							left: `${contextMenu.x}px`,
+							top: `${contextMenu.y}px`,
+						}}
+					>
+						<div
+							style={styles.contextMenuItem}
+							onClick={() => handleMoveCard("hand")}
+							onMouseEnter={(e) =>
+								(e.currentTarget.style.backgroundColor = "#444")
+							}
+							onMouseLeave={(e) =>
+								(e.currentTarget.style.backgroundColor =
+									"transparent")
+							}
+						>
+							Move to Hand
+						</div>
+						<div
+							style={styles.contextMenuItem}
+							onClick={() => handleMoveCard("library")}
+							onMouseEnter={(e) =>
+								(e.currentTarget.style.backgroundColor = "#444")
+							}
+							onMouseLeave={(e) =>
+								(e.currentTarget.style.backgroundColor =
+									"transparent")
+							}
+						>
+							Keep in Library
+						</div>
+						<div
+							style={styles.contextMenuItem}
+							onClick={() => handleMoveCard("graveyard")}
+							onMouseEnter={(e) =>
+								(e.currentTarget.style.backgroundColor = "#444")
+							}
+							onMouseLeave={(e) =>
+								(e.currentTarget.style.backgroundColor =
+									"transparent")
+							}
+						>
+							Move to Graveyard
+						</div>
+						<div
+							style={styles.contextMenuItem}
+							onClick={() => handleMoveCard("exile")}
+							onMouseEnter={(e) =>
+								(e.currentTarget.style.backgroundColor = "#444")
+							}
+							onMouseLeave={(e) =>
+								(e.currentTarget.style.backgroundColor =
+									"transparent")
+							}
+						>
+							Move to Exile
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	);
 };
 
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
 	overlay: {
 		position: "fixed" as const,
 		top: 0,
@@ -149,5 +254,23 @@ const styles = {
 		overflow: "hidden" as const,
 		textOverflow: "ellipsis" as const,
 		whiteSpace: "nowrap" as const,
+	},
+	contextMenu: {
+		position: "fixed" as const,
+		backgroundColor: "#2a2a2a",
+		border: "1px solid #555",
+		borderRadius: "4px",
+		zIndex: 3001,
+		minWidth: "150px",
+		boxShadow: "0 4px 8px rgba(0, 0, 0, 0.3)",
+		overflow: "hidden" as const,
+	},
+	contextMenuItem: {
+		padding: "8px 12px",
+		cursor: "pointer",
+		borderBottom: "1px solid #444",
+		fontSize: "12px",
+		transition: "background-color 0.2s",
+		userSelect: "none",
 	},
 };

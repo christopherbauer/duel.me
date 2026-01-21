@@ -1,3 +1,5 @@
+import { AllPart } from "../seed/types";
+
 export type CardId = Pick<Card, "id">;
 export type CommanderIds = Pick<Deck, "commander_ids">;
 export type DeckCards = Exclude<DeckCard, "deck_id" | "zone">;

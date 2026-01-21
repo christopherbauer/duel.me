@@ -261,7 +261,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 								// Bell curve scale calculation
 								let scale = 1;
 								if (hoveredCardId === obj.id) {
-									scale = 1.4; // Hovered card
+									scale = 2.25; // Hovered card
 								} else if (hoveredCardId) {
 									const hoveredIdx = objects.findIndex(
 										(o) => o.id === hoveredCardId,
@@ -270,7 +270,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 									// Bell curve: scale decreases with distance
 									scale =
 										1 +
-										0.4 *
+										0.8 *
 											Math.exp(
 												-((distance * distance) / 3),
 											);
@@ -387,7 +387,7 @@ export const zoneStyles = {
 		border: "1px solid #333",
 		display: "flex" as const,
 		flexDirection: "column" as const,
-		overflow: "hidden" as const,
+		overflow: "visible" as const,
 	},
 	zoneLabel: {
 		fontSize: "10px",
@@ -399,7 +399,7 @@ export const zoneStyles = {
 		flex: 1,
 		display: "flex" as const,
 		flexDirection: "column" as const,
-		overflowY: "auto" as const,
+		overflowY: "visible" as const,
 		fontSize: "9px",
 	},
 	breakdown: {
@@ -513,7 +513,7 @@ export const zoneStyles = {
 		justifyContent: "center" as const,
 		gap: "8px",
 		padding: "8px 4px",
-		overflow: "hidden" as const,
+		overflow: "visible" as const,
 	},
 	handCard: {
 		width: "80px",

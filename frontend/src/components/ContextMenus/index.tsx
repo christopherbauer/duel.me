@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useGameStore } from "../../store";
+import { ActionMethod } from "../../types";
 
 enum ContextMenuType {
 	Library = "library",
@@ -33,7 +34,7 @@ interface ContextMenuProps {
 	type: "library" | "hand" | "graveyard" | "exile" | "battlefield";
 	objectId?: string;
 	onClose: () => void;
-	executeAction: (action: string, metadata?: any) => void;
+	executeAction: ActionMethod;
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -65,7 +66,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 
 	const handleMenuItemClick = (item: MenuItem) => {
 		if (item.action) {
-			executeAction(item.action, item.metadata);
+			executeAction(item.action, undefined, item.metadata);
 			onClose();
 		}
 	};
@@ -131,6 +132,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 														e.stopPropagation();
 														executeAction(
 															"add_counter",
+															undefined,
 															{
 																objectId,
 																counterType:
@@ -147,6 +149,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 														e.stopPropagation();
 														executeAction(
 															"remove_counter",
+															undefined,
 															{
 																objectId,
 																counterType:

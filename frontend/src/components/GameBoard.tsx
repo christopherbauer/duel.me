@@ -7,6 +7,7 @@ import { ZoneDisplay, zoneStyles } from "./ZoneDisplay";
 import { ScryModal } from "./ScryModal";
 import { ExileModal } from "./ExileModal";
 import { LibrarySearchModal } from "./LibrarySearchModal";
+import { ActionMethod } from "../types";
 
 export const GameBoard: React.FC = () => {
 	const { gameId } = useParams<{ gameId: string }>();
@@ -57,8 +58,8 @@ export const GameBoard: React.FC = () => {
 		}
 	}, [gameId, viewerSeat, setGameState]);
 
-	const executeAction = useCallback(
-		async (action: string, metadata?: any) => {
+	const executeAction: ActionMethod = useCallback(
+		async (action: string, seat?: number, metadata?: any) => {
 			if (!gameId || !gameState) return;
 
 			// Handle counter actions specially - update local state
@@ -90,7 +91,7 @@ export const GameBoard: React.FC = () => {
 				// Also send to server
 				try {
 					await api.executeAction(gameId, {
-						seat: viewerSeat,
+						seat: seat || viewerSeat,
 						action_type: action,
 						metadata,
 					});
@@ -127,7 +128,7 @@ export const GameBoard: React.FC = () => {
 
 			try {
 				await api.executeAction(gameId, {
-					seat: viewerSeat,
+					seat: seat || viewerSeat,
 					action_type: action,
 					metadata,
 				});
@@ -253,12 +254,12 @@ export const GameBoard: React.FC = () => {
 				Math.abs(newX - existingCard.position.x) < 3 &&
 				Math.abs(newY - existingCard.position.y) < 3
 			) {
-				executeAction("move_to_battlefield", {
+				executeAction("move_to_battlefield", undefined, {
 					objectId: cardId,
 					position: existingCard.position,
 				});
 			} else {
-				executeAction("move_to_battlefield", {
+				executeAction("move_to_battlefield", undefined, {
 					objectId: cardId,
 					position: { x: newX, y: newY },
 				});
@@ -272,7 +273,7 @@ export const GameBoard: React.FC = () => {
 			const x = e.clientX - rect.left - 75;
 			const y = e.clientY - rect.top - 100;
 
-			executeAction("move_to_battlefield", {
+			executeAction("move_to_battlefield", undefined, {
 				objectId: cardId,
 				position: { x, y },
 			});
@@ -379,7 +380,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction("life_change", {
+										executeAction("life_change", 2, {
 											amount: -1,
 										})
 									}
@@ -389,7 +390,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction("life_change", {
+										executeAction("life_change", 2, {
 											amount: 1,
 										})
 									}
@@ -533,7 +534,7 @@ export const GameBoard: React.FC = () => {
 										});
 									}}
 									onDoubleClick={() =>
-										executeAction("tap", {
+										executeAction("tap", undefined, {
 											objectId: obj.id,
 										})
 									}
@@ -601,7 +602,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction("life_change", {
+										executeAction("life_change", 1, {
 											amount: -1,
 										})
 									}
@@ -611,7 +612,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction("life_change", {
+										executeAction("life_change", 1, {
 											amount: 1,
 										})
 									}
@@ -705,6 +706,11 @@ export const GameBoard: React.FC = () => {
 			{exileModal && (
 				<ExileModal
 					cards={exileModal}
+					onMoveCard={(cardId, zone) => {
+						executeAction(`move_to_${zone}`, undefined, {
+							objectId: cardId,
+						});
+					}}
 					onClose={() => setExileModal(null)}
 				/>
 			)}
@@ -718,7 +724,9 @@ export const GameBoard: React.FC = () => {
 						setLibrarySearchModal(null);
 					}}
 					onMoveCard={(cardId, zone) => {
-						executeAction(`move_to_${zone}`, { objectId: cardId });
+						executeAction(`move_to_${zone}`, undefined, {
+							objectId: cardId,
+						});
 						// Keep modal open after moving
 					}}
 				/>
@@ -953,7 +961,7 @@ const styles = {
 		borderRadius: "6px",
 		display: "flex" as const,
 		flexDirection: "column" as const,
-		overflow: "auto" as const,
+		overflow: "visible" as const,
 		minHeight: "80px",
 	},
 	sectionHeader: {

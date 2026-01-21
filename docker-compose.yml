@@ -24,6 +24,7 @@ services:
     container_name: duelme_backend
     environment:
       NODE_ENV: development
+      LOG_LEVEL: info
       DATABASE_URL: postgresql://duelme:duelme_dev@postgres:5432/duelme
       PORT: 3001
     ports:

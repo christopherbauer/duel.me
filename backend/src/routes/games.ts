@@ -8,11 +8,31 @@ import {
 	DeckCards,
 	CommanderIds,
 	GameStateQueryResult,
+	Card,
 } from "../types/game";
 import logger from "../core/logger";
 import { handleGameAction } from "./gameActions";
 
 const router = Router();
+//in-memory store tokens for inclusion in gamestate responses
+let tokenRecord: Record<string, Card> = {};
+const retrieveTokens = async () => {
+	logger.info("Retrieving token cards from database...");
+	const tokens = await query<Card>(
+		"SELECT * from cards c where c.layout = 'token'",
+	);
+	if (!tokens) {
+		throw new Error("Failed to retrieve tokens from database");
+	}
+	tokenRecord = Object.values(tokens.rows).reduce(
+		(acc, token) => {
+			acc[token.name] = token;
+			return acc;
+		},
+		{} as Record<string, Card>,
+	);
+};
+retrieveTokens();
 
 /**
  * @swagger
@@ -186,6 +206,34 @@ router.get("/:id", async (req, res) => {
 		);
 
 		logger.debug(JSON.stringify(objectsResult?.rows));
+		// const extractTokens = (objects: GameStateQueryResult[]) => {
+		// 	const tokens: Record<string, { id: string; name: string }> = {};
+		// 	for (const obj of objects) {
+		// 		if (obj.all_parts && obj.all_parts.length > 0) {
+		// 			for (const part of obj.all_parts) {
+		// 				if (part.component === "token" && part.name) {
+		// 					tokens[part.id] = {
+		// 						id: part.id,
+		// 						name: part.name,
+		// 					};
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// 	return tokens;
+		// };
+		// const gameTokenList = extractTokens(objectsResult?.rows || []);
+		// const gameTokens = Object.values(gameTokenList).map((tokenInfo) => {
+		// 	const tokenCard = tokenRecord[tokenInfo.name];
+		// 	if (tokenCard) {
+		// 		return tokenCard;
+		// 	} else {
+		// 		logger.warn(
+		// 			`Token card not found for token name: ${tokenInfo.name}`,
+		// 		);
+		// 		return null;
+		// 	}
+		// });
 
 		// Project visibility: hide opponent's hand and library
 		const projectedObjects = objectsResult?.rows.map((obj) => {
@@ -220,9 +268,10 @@ router.get("/:id", async (req, res) => {
 				counters: obj.counters,
 				notes: obj.notes,
 				position: obj.position,
+				// tokens: gameTokens,
 			};
 		});
-		logger.info(JSON.stringify(projectedObjects));
+		logger.debug(JSON.stringify(projectedObjects));
 		if (!projectedObjects) {
 			return res
 				.status(500)
