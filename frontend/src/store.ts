@@ -54,15 +54,6 @@ export enum Color {
 	W = "W",
 }
 
-export interface ImageUris {
-	png: string;
-	large: string;
-	small: string;
-	normal: string;
-	art_crop: string;
-	border_crop: string;
-}
-
 export enum Layout {
 	Class = "class",
 	Normal = "normal",
