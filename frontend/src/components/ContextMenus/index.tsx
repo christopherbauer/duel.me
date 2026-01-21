@@ -22,9 +22,11 @@ interface MenuItem {
 const typeToMenuItemsMap: (
 	objectId?: string,
 	availableTokens?: Card[],
+	position?: { x: number; y: number },
 ) => Record<ContextMenuType, MenuItem[]> = (
 	objectId,
 	availableTokens = [],
+	position,
 ) => ({
 	[ContextMenuType.Library]: libraryMenuItems(),
 	[ContextMenuType.Hand]: handMenuItems(objectId),
@@ -32,7 +34,7 @@ const typeToMenuItemsMap: (
 	[ContextMenuType.Exile]: exileMenuItems(objectId),
 	[ContextMenuType.Battlefield]: objectId
 		? battlefieldMenuItems(objectId)
-		: backgroundTokenMenuItems(availableTokens),
+		: backgroundTokenMenuItems(availableTokens, position),
 });
 interface ContextMenuProps {
 	x: number;
@@ -52,6 +54,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	executeAction,
 }) => {
 	const [hoveredSubmenu, setHoveredSubmenu] = useState<string | null>(null);
+	const [hoveredSubitem, setHoveredSubitem] = useState<string | null>(null);
 	const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 	const submenuTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -69,8 +72,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	const { availableTokens } = useGameStore();
 
 	const menuItems = useMemo(() => {
-		return typeToMenuItemsMap(objectId, availableTokens)[type];
-	}, [type, objectId, availableTokens]);
+		return typeToMenuItemsMap(objectId, availableTokens, { x, y })[type];
+	}, [type, objectId, availableTokens, x, y]);
 
 	const handleMenuItemClick = (item: MenuItem) => {
 		if (item.action) {
@@ -206,36 +209,169 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 						</div>
 
 						{item.submenu && hoveredSubmenu === item.label && (
-							<div style={styles.submenu}>
+							<div
+								style={styles.submenu}
+								onMouseLeave={() => {
+									submenuTimeoutRef.current = setTimeout(
+										() => {
+											setHoveredSubitem(null);
+											setHoveredSubmenu(null);
+										},
+										150,
+									);
+								}}
+								onMouseEnter={() => {
+									if (submenuTimeoutRef.current) {
+										clearTimeout(submenuTimeoutRef.current);
+										submenuTimeoutRef.current = null;
+									}
+								}}
+							>
 								{item.submenu.map((subitem) => (
 									<div
 										key={subitem.label}
 										style={{
-											...styles.contextMenuItem,
-											borderBottom:
-												subitem ===
-												item.submenu![
-													item.submenu!.length - 1
-												]
-													? "none"
-													: "1px solid #444",
+											position: "relative" as const,
 										}}
-										onClick={() => {
-											handleMenuItemClick(subitem);
+										onMouseEnter={() => {
+											if (submenuTimeoutRef.current) {
+												clearTimeout(
+													submenuTimeoutRef.current,
+												);
+												submenuTimeoutRef.current =
+													null;
+											}
+											if (subitem.submenu) {
+												setHoveredSubitem(
+													subitem.label,
+												);
+											}
 										}}
-										onMouseEnter={(e) => {
-											(
-												e.currentTarget as HTMLElement
-											).style.backgroundColor = "#444";
-										}}
-										onMouseLeave={(e) => {
-											(
-												e.currentTarget as HTMLElement
-											).style.backgroundColor =
-												"transparent";
+										onMouseLeave={() => {
+											submenuTimeoutRef.current =
+												setTimeout(() => {
+													setHoveredSubitem(null);
+												}, 150);
 										}}
 									>
-										{subitem.label}
+										<div
+											style={{
+												...styles.contextMenuItem,
+												borderBottom:
+													subitem ===
+													item.submenu![
+														item.submenu!.length - 1
+													]
+														? "none"
+														: "1px solid #444",
+												paddingRight: subitem.submenu
+													? "20px"
+													: "12px",
+											}}
+											onClick={() => {
+												handleMenuItemClick(subitem);
+											}}
+											onMouseEnter={(e) => {
+												(
+													e.currentTarget as HTMLElement
+												).style.backgroundColor =
+													"#444";
+											}}
+											onMouseLeave={(e) => {
+												(
+													e.currentTarget as HTMLElement
+												).style.backgroundColor =
+													"transparent";
+											}}
+										>
+											{subitem.label}
+											{subitem.submenu && (
+												<span
+													style={styles.submenuArrow}
+												>
+													›
+												</span>
+											)}
+										</div>
+										{/* Third-level submenu */}
+										{subitem.submenu &&
+											hoveredSubitem ===
+												subitem.label && (
+												<div
+													style={styles.submenu}
+													onMouseEnter={() => {
+														if (
+															submenuTimeoutRef.current
+														) {
+															clearTimeout(
+																submenuTimeoutRef.current,
+															);
+															submenuTimeoutRef.current =
+																null;
+														}
+														setHoveredSubitem(
+															subitem.label,
+														);
+													}}
+													onMouseLeave={() => {
+														submenuTimeoutRef.current =
+															setTimeout(() => {
+																setHoveredSubitem(
+																	null,
+																);
+															}, 150);
+													}}
+												>
+													{subitem.submenu.map(
+														(subsubitem) => (
+															<div
+																key={
+																	subsubitem.label
+																}
+																style={{
+																	...styles.contextMenuItem,
+																	borderBottom:
+																		subsubitem ===
+																		subitem
+																			.submenu![
+																			subitem
+																				.submenu!
+																				.length -
+																				1
+																		]
+																			? "none"
+																			: "1px solid #444",
+																}}
+																onClick={() => {
+																	handleMenuItemClick(
+																		subsubitem,
+																	);
+																}}
+																onMouseEnter={(
+																	e,
+																) => {
+																	(
+																		e.currentTarget as HTMLElement
+																	).style.backgroundColor =
+																		"#444";
+																}}
+																onMouseLeave={(
+																	e,
+																) => {
+																	(
+																		e.currentTarget as HTMLElement
+																	).style.backgroundColor =
+																		"transparent";
+																}}
+															>
+																{
+																	subsubitem.label
+																}
+															</div>
+														),
+													)}
+												</div>
+											)}
 									</div>
 								))}
 							</div>
@@ -280,7 +416,7 @@ const styles = {
 		minWidth: "120px",
 		zIndex: 2001,
 		boxShadow: "0 4px 8px rgba(0, 0, 0, 0.3)",
-		overflow: "hidden" as const,
+		overflow: "visible" as const,
 	},
 	submenuArrow: {
 		fontSize: "14px",
@@ -495,7 +631,10 @@ const battlefieldMenuItems = (objectId?: string): MenuItem[] => {
 	];
 };
 
-const backgroundTokenMenuItems = (availableTokens: Card[]): MenuItem[] => {
+const backgroundTokenMenuItems = (
+	availableTokens: Card[],
+	position?: { x: number; y: number },
+): MenuItem[] => {
 	if (!availableTokens || availableTokens.length === 0) {
 		return [
 			{
@@ -505,35 +644,57 @@ const backgroundTokenMenuItems = (availableTokens: Card[]): MenuItem[] => {
 	}
 
 	return [
-		...availableTokens.flatMap((token) => {
-			const displayLabel =
-				token.power && token.toughness
-					? `${token.name} - ${token.power}/${token.toughness}`
-					: token.name;
+		{
+			label: "Create Token",
+			submenu: availableTokens.map((token) => {
+				const displayLabel =
+					token.power && token.toughness
+						? `${token.name} - ${token.power}/${token.toughness}`
+						: token.name;
 
-			return [
-				{
-					label: `Create 1 ${displayLabel}`,
-					action: "create_token_copy",
-					metadata: { tokenCardId: token.id, quantity: 1 },
-				},
-				{
-					label: `Create 2 ${displayLabel}`,
-					action: "create_token_copy",
-					metadata: { tokenCardId: token.id, quantity: 2 },
-				},
-				{
-					label: `Create 3 ${displayLabel}`,
-					action: "create_token_copy",
-					metadata: { tokenCardId: token.id, quantity: 3 },
-				},
-				{
-					label: `Create 4 ${displayLabel}`,
-					action: "create_token_copy",
-					metadata: { tokenCardId: token.id, quantity: 4 },
-				},
-			];
-		}),
+				return {
+					label: displayLabel,
+					submenu: [
+						{
+							label: "1",
+							action: "create_token_copy",
+							metadata: {
+								tokenCardId: token.id,
+								quantity: 1,
+								position,
+							},
+						},
+						{
+							label: "2",
+							action: "create_token_copy",
+							metadata: {
+								tokenCardId: token.id,
+								quantity: 2,
+								position,
+							},
+						},
+						{
+							label: "3",
+							action: "create_token_copy",
+							metadata: {
+								tokenCardId: token.id,
+								quantity: 3,
+								position,
+							},
+						},
+						{
+							label: "4",
+							action: "create_token_copy",
+							metadata: {
+								tokenCardId: token.id,
+								quantity: 4,
+								position,
+							},
+						},
+					],
+				};
+			}),
+		},
 	];
 };
 export default ContextMenu;

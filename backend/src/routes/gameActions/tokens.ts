@@ -67,7 +67,9 @@ export const createTokenCopy: ActionMethod = async (
 
 		if (position) {
 			insertQuery += `, position`;
-			params.push(JSON.stringify({ x: position.x, y: position.y }));
+			const offsetX = position.x + i * 5;
+			const offsetY = position.y + i * 5;
+			params.push(JSON.stringify({ x: offsetX, y: offsetY }));
 		}
 
 		insertQuery += `) VALUES ($1, $2, $3, $4, $5, $6`;

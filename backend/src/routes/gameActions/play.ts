@@ -39,7 +39,7 @@ export const moveToGraveyard: ActionMethod = async (_id, _seat, metadata) => {
 			`SELECT is_token FROM game_objects WHERE id = $1`,
 			[objectId],
 		);
-		
+
 		if (checkToken?.rows?.[0]?.is_token) {
 			// Delete token
 			await query(`DELETE FROM game_objects WHERE id = $1`, [objectId]);

@@ -13,15 +13,16 @@ export const moveToExile: ActionMethod = async (_id, seat, metadata) => {
 			`SELECT is_token FROM game_objects WHERE id = $1`,
 			[objectId],
 		);
-		
+
 		if (checkToken?.rows?.[0]?.is_token) {
 			// Delete token
 			await query(`DELETE FROM game_objects WHERE id = $1`, [objectId]);
 		} else {
 			// Move card to exile
-			await query(`UPDATE game_objects SET zone = 'exile' WHERE id = $1`, [
-				objectId,
-			]);
+			await query(
+				`UPDATE game_objects SET zone = 'exile' WHERE id = $1`,
+				[objectId],
+			);
 		}
 	}
 	logger.info(`Exiled ${count} cards from library by seat ${seat}`);
