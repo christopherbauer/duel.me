@@ -58,6 +58,16 @@ export const GameBoard: React.FC = () => {
 		}
 	}, [gameId, viewerSeat, setGameState]);
 
+	const loadAvailableTokens = useCallback(async () => {
+		if (!gameId) return;
+		try {
+			const response = await api.getGameTokens(gameId);
+			useGameStore.getState().setAvailableTokens(response.data);
+		} catch (err) {
+			console.error("Failed to load available tokens:", err);
+		}
+	}, [gameId]);
+
 	const executeAction: ActionMethod = useCallback(
 		async (action: string, seat?: number, metadata?: any) => {
 			if (!gameId || !gameState) return;
@@ -70,7 +80,8 @@ export const GameBoard: React.FC = () => {
 
 				const updatedObjects = gameState.objects.map((obj) => {
 					if (obj.id === objectId) {
-						const currentCount = obj.counters[counterType] || 0;
+						const currentCount =
+							(obj.counters as any)[counterType] || 0;
 						const newCount =
 							action === "add_counter"
 								? currentCount + 1
@@ -168,11 +179,12 @@ export const GameBoard: React.FC = () => {
 	useEffect(() => {
 		if (gameId) {
 			loadGameState();
+			loadAvailableTokens();
 			flippedSeatsRef.current.clear(); // Reset flipped seats when loading new game
 			const interval = setInterval(loadGameState, 5000);
 			return () => clearInterval(interval);
 		}
-	}, [gameId, viewerSeat, loadGameState]);
+	}, [gameId, viewerSeat, loadGameState, loadAvailableTokens]);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -481,6 +493,18 @@ export const GameBoard: React.FC = () => {
 						onDrop={(e) => {
 							const cardId = e.dataTransfer.getData("text/plain");
 							if (cardId) handleCardDropOnBattlefield(e, cardId);
+						}}
+						onContextMenu={(e) => {
+							// Only show token creation menu if clicking on empty space
+							if (e.target === e.currentTarget) {
+								e.preventDefault();
+								setContextMenu({
+									x: e.clientX,
+									y: e.clientY,
+									type: "battlefield",
+									// No objectId means we're clicking on empty space
+								});
+							}
 						}}
 					>
 						{gameState.objects

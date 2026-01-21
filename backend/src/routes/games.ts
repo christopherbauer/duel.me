@@ -338,10 +338,13 @@ router.get("/:id/tokens", async (req, res) => {
 			if (obj.all_parts && obj.all_parts.length > 0) {
 				for (const part of obj.all_parts) {
 					if (part.component === "token" && part.name) {
-						tokens[part.id] = {
-							id: part.id,
-							name: part.name,
-						};
+						// Deduplicate by token name, not ID
+						if (!tokens[part.name]) {
+							tokens[part.name] = {
+								id: part.id,
+								name: part.name,
+							};
+						}
 					}
 				}
 			}
@@ -350,17 +353,20 @@ router.get("/:id/tokens", async (req, res) => {
 	};
 	const allPartsResult = await GamesStore().getAllParts(id);
 	const gameTokenList = extractTokens(allPartsResult || []);
-	const gameTokens = Object.values(gameTokenList).map((tokenInfo) => {
-		const tokenCard = tokenRecord[tokenInfo.name];
-		if (tokenCard) {
-			return tokenCard;
-		} else {
-			logger.warn(
-				`Token card not found for token name: ${tokenInfo.name}`,
-			);
-			return null;
-		}
-	});
+	const gameTokens = Object.values(gameTokenList)
+		.map((tokenInfo) => {
+			const tokenCard = tokenRecord[tokenInfo.name];
+			if (tokenCard) {
+				return tokenCard;
+			} else {
+				logger.warn(
+					`Token card not found for token name: ${tokenInfo.name}`,
+				);
+				return null;
+			}
+		})
+		.filter((token): token is Card => token !== null)
+		.sort((a, b) => a.name.localeCompare(b.name));
 	res.json(gameTokens);
 });
 

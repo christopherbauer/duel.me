@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useGameStore } from "../../store";
+import { useGameStore, Card } from "../../store";
 import { ActionMethod } from "../../types";
 
 enum ContextMenuType {
@@ -21,12 +21,18 @@ interface MenuItem {
 
 const typeToMenuItemsMap: (
 	objectId?: string,
-) => Record<ContextMenuType, MenuItem[]> = (objectId) => ({
+	availableTokens?: Card[],
+) => Record<ContextMenuType, MenuItem[]> = (
+	objectId,
+	availableTokens = [],
+) => ({
 	[ContextMenuType.Library]: libraryMenuItems(),
 	[ContextMenuType.Hand]: handMenuItems(objectId),
 	[ContextMenuType.Graveyard]: graveyardMenuItems(objectId),
 	[ContextMenuType.Exile]: exileMenuItems(objectId),
-	[ContextMenuType.Battlefield]: battlefieldMenuItems(objectId),
+	[ContextMenuType.Battlefield]: objectId
+		? battlefieldMenuItems(objectId)
+		: backgroundTokenMenuItems(availableTokens),
 });
 interface ContextMenuProps {
 	x: number;
@@ -60,9 +66,11 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 		};
 	}, [onClose]);
 
+	const { availableTokens } = useGameStore();
+
 	const menuItems = useMemo(() => {
-		return typeToMenuItemsMap(objectId)[type];
-	}, [type, objectId]);
+		return typeToMenuItemsMap(objectId, availableTokens)[type];
+	}, [type, objectId, availableTokens]);
 
 	const handleMenuItemClick = (item: MenuItem) => {
 		if (item.action) {
@@ -414,7 +422,7 @@ const battlefieldMenuItems = (objectId?: string): MenuItem[] => {
 	const counterDisplayItems = counterTypes.map((ct) => ({
 		type: ct.type,
 		label: ct.label,
-		count: counters[ct.type] || 0,
+		count: (counters as any)[ct.type] || 0,
 	}));
 
 	return [
@@ -445,6 +453,31 @@ const battlefieldMenuItems = (objectId?: string): MenuItem[] => {
 			})),
 		},
 		{
+			label: "Create Token Copy",
+			submenu: [
+				{
+					label: "1",
+					action: "create_token_copy",
+					metadata: { sourceObjectId: objectId, quantity: 1 },
+				},
+				{
+					label: "2",
+					action: "create_token_copy",
+					metadata: { sourceObjectId: objectId, quantity: 2 },
+				},
+				{
+					label: "3",
+					action: "create_token_copy",
+					metadata: { sourceObjectId: objectId, quantity: 3 },
+				},
+				{
+					label: "4",
+					action: "create_token_copy",
+					metadata: { sourceObjectId: objectId, quantity: 4 },
+				},
+			],
+		},
+		{
 			label: "Move to Hand",
 			action: "move_to_hand",
 			metadata: { objectId },
@@ -458,6 +491,55 @@ const battlefieldMenuItems = (objectId?: string): MenuItem[] => {
 			label: "Exile",
 			action: "move_to_exile",
 			metadata: { objectId },
+		},
+	];
+};
+
+const backgroundTokenMenuItems = (availableTokens: Card[]): MenuItem[] => {
+	if (!availableTokens || availableTokens.length === 0) {
+		return [
+			{
+				label: "No tokens available",
+			},
+		];
+	}
+
+	return [
+		{
+			label: "Create Token",
+			submenu: availableTokens.map((token) => {
+				// Build display label with power/toughness if available
+				const displayLabel =
+					token.power && token.toughness
+						? `${token.name} - ${token.power}/${token.toughness}`
+						: token.name;
+
+				return {
+					label: displayLabel,
+					submenu: [
+						{
+							label: "1",
+							action: "create_token_copy",
+							metadata: { tokenCardId: token.id, quantity: 1 },
+						},
+						{
+							label: "2",
+							action: "create_token_copy",
+							metadata: { tokenCardId: token.id, quantity: 2 },
+						},
+						{
+							label: "3",
+							action: "create_token_copy",
+							metadata: { tokenCardId: token.id, quantity: 3 },
+						},
+						{
+							label: "4",
+							action: "create_token_copy",
+							metadata: { tokenCardId: token.id, quantity: 4 },
+						},
+					],
+				};
+			}),
 		},
 	];
 };

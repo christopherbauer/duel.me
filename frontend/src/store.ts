@@ -82,10 +82,12 @@ export interface GameStore {
 	currentGameId: string | null;
 	viewerSeat: 1 | 2;
 	gameState: GameState | null;
+	availableTokens: Card[];
 
 	setCurrentGame: (gameId: string) => void;
 	setViewerSeat: (seat: 1 | 2) => void;
 	setGameState: (state: GameState) => void;
+	setAvailableTokens: (tokens: Card[]) => void;
 	clearGame: () => void;
 }
 
@@ -93,10 +95,17 @@ export const useGameStore = create<GameStore>((set) => ({
 	currentGameId: null,
 	viewerSeat: 1,
 	gameState: null,
+	availableTokens: [],
 
 	setCurrentGame: (gameId: string) => set({ currentGameId: gameId }),
 	setViewerSeat: (seat: 1 | 2) => set({ viewerSeat: seat }),
 	setGameState: (state: GameState) => set({ gameState: state }),
+	setAvailableTokens: (tokens: Card[]) => set({ availableTokens: tokens }),
 	clearGame: () =>
-		set({ currentGameId: null, gameState: null, viewerSeat: 1 }),
+		set({
+			currentGameId: null,
+			gameState: null,
+			viewerSeat: 1,
+			availableTokens: [],
+		}),
 }));

@@ -5,6 +5,7 @@ import { lifeChange } from "./lifeChange";
 import { exileTopFromLibrary, moveToExile } from "./exile";
 import { moveToHand } from "./hand";
 import { moveToBattlefield, moveToGraveyard } from "./play";
+import { createTokenCopy, removeToken } from "./tokens";
 import { ActionMethod } from "./types";
 import { query } from "../../core/pool";
 import { addCounter, removeCounter } from "./counters";
@@ -27,6 +28,8 @@ enum Actions {
 	discard,
 	add_counter,
 	remove_counter,
+	create_token_copy,
+	remove_token,
 }
 
 const actionMap: Record<keyof typeof Actions, ActionMethod> = {
@@ -47,6 +50,8 @@ const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	discard: moveToGraveyard,
 	add_counter: addCounter,
 	remove_counter: removeCounter,
+	create_token_copy: createTokenCopy,
+	remove_token: removeToken,
 };
 export const handleGameAction = async (
 	action: keyof typeof Actions,
