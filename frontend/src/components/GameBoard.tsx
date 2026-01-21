@@ -313,32 +313,38 @@ export const GameBoard: React.FC = () => {
 			<div style={styles.board}>
 				{/* Opponent Section (5%) */}
 				<div style={styles.opponentSection}>
-					<div style={styles.seatLabel}>
-						{viewerSeat === 1
-							? "Seat 2 (Opponent)"
-							: "Seat 1 (Opponent)"}
-					</div>
-					<div style={styles.lifeCounter}>
-						<span style={styles.lifeValue}>
-							{viewerSeat === 1 ? seat2Life : seat1Life}
-						</span>
-						<div style={styles.lifeBars}>
-							<button
-								style={styles.lifeButton}
-								onClick={() =>
-									executeAction("life_change", { amount: -1 })
-								}
-							>
-								−
-							</button>
-							<button
-								style={styles.lifeButton}
-								onClick={() =>
-									executeAction("life_change", { amount: 1 })
-								}
-							>
-								+
-							</button>
+					<div style={styles.sectionHeader}>
+						<div style={styles.seatLabel}>
+							{viewerSeat === 1
+								? "Seat 2 (Opponent)"
+								: "Seat 1 (Opponent)"}
+						</div>
+						<div style={styles.lifeCounter}>
+							<span style={styles.lifeValue}>
+								{viewerSeat === 1 ? seat2Life : seat1Life}
+							</span>
+							<div style={styles.lifeBars}>
+								<button
+									style={styles.lifeButton}
+									onClick={() =>
+										executeAction("life_change", {
+											amount: -1,
+										})
+									}
+								>
+									−
+								</button>
+								<button
+									style={styles.lifeButton}
+									onClick={() =>
+										executeAction("life_change", {
+											amount: 1,
+										})
+									}
+								>
+									+
+								</button>
+							</div>
 						</div>
 					</div>
 					<div style={styles.zoneGrid}>
@@ -528,28 +534,36 @@ export const GameBoard: React.FC = () => {
 
 				{/* Player Section (20%) */}
 				<div style={styles.playerSection}>
-					<div style={styles.seatLabel}>Seat {viewerSeat} (You)</div>
-					<div style={styles.lifeCounter}>
-						<span style={styles.lifeValue}>
-							{viewerSeat === 1 ? seat1Life : seat2Life}
-						</span>
-						<div style={styles.lifeBars}>
-							<button
-								style={styles.lifeButton}
-								onClick={() =>
-									executeAction("life_change", { amount: -1 })
-								}
-							>
-								−
-							</button>
-							<button
-								style={styles.lifeButton}
-								onClick={() =>
-									executeAction("life_change", { amount: 1 })
-								}
-							>
-								+
-							</button>
+					<div style={styles.sectionHeader}>
+						<div style={styles.seatLabel}>
+							Seat {viewerSeat} (You)
+						</div>
+						<div style={styles.lifeCounter}>
+							<span style={styles.lifeValue}>
+								{viewerSeat === 1 ? seat1Life : seat2Life}
+							</span>
+							<div style={styles.lifeBars}>
+								<button
+									style={styles.lifeButton}
+									onClick={() =>
+										executeAction("life_change", {
+											amount: -1,
+										})
+									}
+								>
+									−
+								</button>
+								<button
+									style={styles.lifeButton}
+									onClick={() =>
+										executeAction("life_change", {
+											amount: 1,
+										})
+									}
+								>
+									+
+								</button>
+							</div>
 						</div>
 					</div>
 					<div style={styles.zoneGrid}>
@@ -836,35 +850,40 @@ const styles = {
 		overflow: "auto" as const,
 		minHeight: "80px",
 	},
+	sectionHeader: {
+		display: "flex" as const,
+		flexDirection: "row" as const,
+		alignItems: "center" as const,
+		gap: "12px",
+		marginBottom: "4px",
+	},
 	seatLabel: {
-		fontSize: "12px",
+		fontSize: "11px",
 		fontWeight: "bold" as const,
-		marginBottom: "5px",
 		color: "#aaa",
 	},
 	lifeCounter: {
 		display: "flex" as const,
 		alignItems: "center" as const,
-		gap: "8px",
-		marginBottom: "5px",
+		gap: "4px",
 	},
 	lifeValue: {
-		fontSize: "24px",
+		fontSize: "14px",
 		fontWeight: "bold" as const,
-		minWidth: "50px",
+		minWidth: "24px",
 	},
 	lifeBars: {
 		display: "flex" as const,
-		gap: "4px",
+		gap: "2px",
 	},
 	lifeButton: {
-		padding: "4px 8px",
+		padding: "2px 4px",
 		backgroundColor: "#444",
 		color: "#fff",
 		border: "none",
 		borderRadius: "3px",
 		cursor: "pointer",
-		fontSize: "11px",
+		fontSize: "10px",
 	},
 	battlefieldGrid: {
 		position: "relative" as const,
@@ -1007,7 +1026,7 @@ const styles = {
 	},
 	zoneGrid: {
 		display: "grid",
-		gridTemplateColumns: "1fr 1fr 0.8fr 0.8fr",
+		gridTemplateColumns: "3fr 0.6fr 0.6fr 0.6fr",
 		gap: "5px",
 		flex: 1,
 		minHeight: 0,

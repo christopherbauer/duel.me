@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 interface ZoneDisplayProps {
 	zone: string;
 	label: string;
@@ -64,6 +66,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 	onContextMenu,
 	onExileModalOpen,
 }) => {
+	const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
 	const count = objects.length;
 	const typeBreakdown = getCardsByType(
 		objects.filter((o) => o.zone === zone),
@@ -73,6 +76,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 	const isLibrary = zone === "library";
 	const isGraveyard = zone === "graveyard";
 	const isExile = zone === "exile";
+	const isHand = zone === "hand";
 
 	return (
 		<div style={zoneStyles.zone}>
@@ -242,6 +246,111 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 					)
 				) : redacted ? (
 					<div style={zoneStyles.redactedCount}>{count} card(s)</div>
+				) : isHand ? (
+					// Hand displays cards horizontally with hover enlargement
+					count > 0 ? (
+						<div style={zoneStyles.handContainer}>
+							{objects.map((obj, idx) => {
+								const imageUrl =
+									obj.card &&
+									obj.card.image_uris &&
+									obj.card.image_uris.normal
+										? obj.card.image_uris.normal
+										: null;
+
+								// Bell curve scale calculation
+								let scale = 1;
+								if (hoveredCardId === obj.id) {
+									scale = 1.4; // Hovered card
+								} else if (hoveredCardId) {
+									const hoveredIdx = objects.findIndex(
+										(o) => o.id === hoveredCardId,
+									);
+									const distance = Math.abs(idx - hoveredIdx);
+									// Bell curve: scale decreases with distance
+									scale =
+										1 +
+										0.4 *
+											Math.exp(
+												-((distance * distance) / 3),
+											);
+								}
+
+								return (
+									<div
+										key={obj.id}
+										draggable
+										onDragStart={(e) => {
+											e.dataTransfer.effectAllowed =
+												"move";
+											e.dataTransfer.setData(
+												"text/plain",
+												obj.id,
+											);
+											if (onCardDragStart)
+												onCardDragStart(obj.id);
+										}}
+										onContextMenu={(e) => {
+											e.preventDefault();
+											if (onContextMenu)
+												onContextMenu(e, obj.id);
+										}}
+										onMouseEnter={() =>
+											setHoveredCardId(obj.id)
+										}
+										onMouseLeave={() =>
+											setHoveredCardId(null)
+										}
+										style={{
+											...zoneStyles.handCard,
+											transform: `scale(${scale})`,
+											transformOrigin: "bottom center",
+											transition:
+												"transform 0.15s ease-out",
+											zIndex:
+												hoveredCardId === obj.id
+													? 10
+													: idx,
+										}}
+										title={
+											obj.card ? obj.card.name : "Unknown"
+										}
+									>
+										{imageUrl ? (
+											<img
+												src={imageUrl}
+												alt={
+													obj.card
+														? obj.card.name
+														: "Unknown"
+												}
+												style={{
+													width: "100%",
+													height: "100%",
+													borderRadius: "6px",
+													boxShadow:
+														"0 2px 8px rgba(0, 0, 0, 0.4)",
+													display: "block",
+												}}
+											/>
+										) : (
+											<div
+												style={
+													zoneStyles.cardPlaceholder
+												}
+											>
+												{obj.card
+													? obj.card.name
+													: "Unknown"}
+											</div>
+										)}
+									</div>
+								);
+							})}
+						</div>
+					) : (
+						<div style={zoneStyles.emptyZone}>Empty</div>
+					)
 				) : objects.length === 0 ? (
 					<div style={zoneStyles.emptyZone}>Empty</div>
 				) : (
@@ -396,5 +505,25 @@ export const zoneStyles = {
 		fontSize: "7px",
 		textAlign: "center" as const,
 		color: "#bbb",
+	},
+	handContainer: {
+		flex: 1,
+		display: "flex" as const,
+		alignItems: "flex-end" as const,
+		justifyContent: "center" as const,
+		gap: "8px",
+		padding: "8px 4px",
+		overflow: "hidden" as const,
+	},
+	handCard: {
+		width: "80px",
+		height: "112px",
+		flexShrink: 0,
+		cursor: "move" as const,
+		userSelect: "none" as const,
+		border: "1px solid #555",
+		borderRadius: "6px",
+		overflow: "hidden" as const,
+		backgroundColor: "#0a0a0a",
 	},
 };
