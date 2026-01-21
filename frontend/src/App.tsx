@@ -84,11 +84,6 @@ function App() {
 						path="/games/:gameId"
 						element={
 							<div>
-								<Link to="/">
-									<button style={styles.backButton}>
-										← Back to Home
-									</button>
-								</Link>
 								<GameBoard />
 							</div>
 						}

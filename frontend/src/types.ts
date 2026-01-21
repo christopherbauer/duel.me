@@ -9,3 +9,9 @@ export interface CreateGameRequest {
 	deck2_id: string;
 	name: string;
 }
+
+export type ActionMethod = (
+	action: string,
+	seat?: number,
+	metadata?: any,
+) => void;

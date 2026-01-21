@@ -1,5 +1,27 @@
 import { create } from "zustand";
 
+export interface GameState {
+	game_session_id: string;
+	seat1_life: number;
+	seat2_life: number;
+	seat1_commander_damage: number;
+	seat2_commander_damage: number;
+	active_seat: 1 | 2;
+	turn_number: number;
+	objects: GameStateObjects[];
+}
+
+export interface GameStateObjects {
+	id: string;
+	seat: number;
+	zone: Zone;
+	card: Card | null;
+	is_tapped: boolean;
+	is_flipped: boolean;
+	counters: Counters;
+	notes: null;
+	position: Position | null;
+}
 export interface Card {
 	id: string;
 	name: string;
@@ -12,7 +34,7 @@ export interface Card {
 	colors: string[];
 	color_identity: string[];
 	keywords: string[];
-	layout: string;
+	layout: Layout;
 	image_uris: ImageUris;
 }
 export interface ImageUris {
@@ -24,15 +46,36 @@ export interface ImageUris {
 	border_crop: string;
 }
 
-export interface GameState {
-	game_session_id: string;
-	seat1_life: number;
-	seat2_life: number;
-	seat1_commander_damage: number;
-	seat2_commander_damage: number;
-	active_seat: 1 | 2;
-	turn_number: number;
-	objects: any[];
+export enum Color {
+	B = "B",
+	G = "G",
+	R = "R",
+	U = "U",
+	W = "W",
+}
+
+export enum Layout {
+	Class = "class",
+	Normal = "normal",
+}
+
+export interface Counters {
+	plus_one_plus_one?: number;
+	minus_one_minus_one?: number;
+	charge?: number;
+	generic?: number;
+}
+
+export interface Position {
+	x: number;
+	y: number;
+}
+
+export enum Zone {
+	Battlefield = "battlefield",
+	CommandZone = "command_zone",
+	Library = "library",
+	Exile = "exile",
 }
 
 export interface GameStore {

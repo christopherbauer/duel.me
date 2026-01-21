@@ -1,3 +1,14 @@
+import { AllPart } from "../seed/types";
+
+export type CardId = Pick<Card, "id">;
+export type CommanderIds = Pick<Deck, "commander_ids">;
+export type DeckCards = Omit<DeckCard, "deck_id" | "zone">;
+export type DeckDetails = Omit<DeckCard, "deck_id" | "card_id"> &
+	Pick<
+		Card,
+		"id" | "name" | "type_line" | "mana_cost" | "colors" | "image_uris"
+	>;
+
 export interface Card {
 	id: string;
 	name: string;
@@ -53,6 +64,13 @@ export interface GameSession {
 	completed_at?: string;
 }
 
+export type GameStateQueryResult = Omit<
+	GameObject,
+	"game_session_id" | "attachments" | "created_at" | "updated_at"
+> &
+	Card;
+
+export type GameObjectId = Pick<GameObject, "id">;
 export interface GameObject {
 	id: string;
 	game_session_id: string;
