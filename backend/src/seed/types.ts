@@ -17,12 +17,7 @@ export interface Datum {
 	content_type: string;
 	content_encoding: string;
 }
-export type BulkDataResponseType =
-	| "oracle_cards"
-	| "unique_artwork"
-	| "default_cards"
-	| "all_cards"
-	| "rulings";
+export type BulkDataResponseType = 'oracle_cards' | 'unique_artwork' | 'default_cards' | 'all_cards' | 'rulings';
 export interface ScryfallCard {
 	object: string;
 	id: string;

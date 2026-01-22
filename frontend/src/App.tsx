@@ -1,15 +1,9 @@
-import React from "react";
-import {
-	BrowserRouter,
-	Routes,
-	Route,
-	Link,
-	useParams,
-} from "react-router-dom";
-import { DeckList } from "./components/DeckList";
-import { DeckLoader } from "./components/DeckLoader";
-import { GameSetup } from "./components/GameSetup";
-import { GameBoard } from "./components/GameBoard";
+import React from 'react';
+import { BrowserRouter, Routes, Route, Link, useParams } from 'react-router-dom';
+import { DeckList } from './components/DeckList';
+import { DeckLoader } from './components/DeckLoader';
+import { GameSetup } from './components/GameSetup';
+import { GameBoard } from './components/GameBoard';
 
 function HomePage() {
 	return (
@@ -58,9 +52,7 @@ function App() {
 						element={
 							<div style={styles.container}>
 								<Link to="/">
-									<button style={styles.backButton}>
-										← Home
-									</button>
+									<button style={styles.backButton}>← Home</button>
 								</Link>
 								<DeckList />
 							</div>
@@ -72,9 +64,7 @@ function App() {
 						element={
 							<div style={styles.container}>
 								<Link to="/">
-									<button style={styles.backButton}>
-										← Back
-									</button>
+									<button style={styles.backButton}>← Back</button>
 								</Link>
 								<GameSetup />
 							</div>
@@ -96,55 +86,55 @@ function App() {
 
 const styles = {
 	app: {
-		minHeight: "100vh",
-		backgroundColor: "#1a1a1a",
-		color: "#fff",
+		minHeight: '100vh',
+		backgroundColor: '#1a1a1a',
+		color: '#fff',
 	},
 	homeContainer: {
-		display: "flex",
-		flexDirection: "column" as const,
-		justifyContent: "center",
-		alignItems: "center",
-		height: "100vh",
+		display: 'flex',
+		flexDirection: 'column' as const,
+		justifyContent: 'center',
+		alignItems: 'center',
+		height: '100vh',
 	},
 	title: {
-		fontSize: "48px",
-		fontWeight: "bold" as const,
-		marginBottom: "10px",
+		fontSize: '48px',
+		fontWeight: 'bold' as const,
+		marginBottom: '10px',
 	},
 	subtitle: {
-		fontSize: "18px",
-		color: "#999",
-		marginBottom: "40px",
+		fontSize: '18px',
+		color: '#999',
+		marginBottom: '40px',
 	},
 	buttonGroup: {
-		display: "flex",
-		gap: "20px",
+		display: 'flex',
+		gap: '20px',
 	},
 	primaryButton: {
-		padding: "15px 30px",
-		fontSize: "16px",
-		fontWeight: "bold" as const,
-		backgroundColor: "#0066ff",
-		color: "#fff",
-		border: "none",
-		borderRadius: "8px",
-		cursor: "pointer",
-		transition: "background-color 0.3s",
+		padding: '15px 30px',
+		fontSize: '16px',
+		fontWeight: 'bold' as const,
+		backgroundColor: '#0066ff',
+		color: '#fff',
+		border: 'none',
+		borderRadius: '8px',
+		cursor: 'pointer',
+		transition: 'background-color 0.3s',
 	},
 	container: {
-		padding: "20px",
-		maxWidth: "800px",
-		margin: "0 auto",
+		padding: '20px',
+		maxWidth: '800px',
+		margin: '0 auto',
 	},
 	backButton: {
-		marginBottom: "20px",
-		padding: "8px 16px",
-		backgroundColor: "#444",
-		color: "#fff",
-		border: "none",
-		borderRadius: "4px",
-		cursor: "pointer",
+		marginBottom: '20px',
+		padding: '8px 16px',
+		backgroundColor: '#444',
+		color: '#fff',
+		border: 'none',
+		borderRadius: '4px',
+		cursor: 'pointer',
 	},
 };
 

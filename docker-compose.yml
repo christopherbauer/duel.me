@@ -7,11 +7,11 @@ services:
       POSTGRES_PASSWORD: duelme_dev
       POSTGRES_DB: duelme
     ports:
-      - "5433:5432"
+      - '5433:5432'
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U duelme"]
+      test: ['CMD-SHELL', 'pg_isready -U duelme']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,7 +28,7 @@ services:
       DATABASE_URL: postgresql://duelme:duelme_dev@postgres:5432/duelme
       PORT: 3001
     ports:
-      - "3011:3001"
+      - '3011:3001'
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,7 +50,7 @@ services:
       NODE_ENV: development
       REACT_APP_API_URL: http://localhost:3011
     ports:
-      - "3010:3000"
+      - '3010:3000'
     depends_on:
       - backend
     volumes:

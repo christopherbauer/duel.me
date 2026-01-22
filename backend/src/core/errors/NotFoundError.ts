@@ -1,4 +1,4 @@
-import { CustomError } from "./CustomError";
+import { CustomError } from './CustomError';
 
 /**
  * Intentionally generic
@@ -6,7 +6,7 @@ import { CustomError } from "./CustomError";
 export class NotFoundError extends CustomError {
 	statusCode = 404;
 	constructor() {
-		super("Not found");
+		super('Not found');
 
 		Object.setPrototypeOf(this, NotFoundError.prototype);
 	}

@@ -1,7 +1,7 @@
-import { GameState, GameStateQueryResult } from "../types/game";
-import { query } from "../core/pool";
-import { AllPart } from "../seed/types";
-import { AllPartsQueryResult } from "./types";
+import { GameState, GameStateQueryResult } from '../types/game';
+import { query } from '../core/pool';
+import { AllPart } from '../seed/types';
+import { AllPartsQueryResult } from './types';
 
 const GamesStore = () => {
 	const getGamesObjects = async (id: string) => {
@@ -14,7 +14,7 @@ const GamesStore = () => {
 			   	LEFT JOIN cards c ON go.card_id = c.id
 			   WHERE go.game_session_id = $1
 			   ORDER BY go.zone, go."order", go.created_at`,
-			[id],
+			[id]
 		);
 		return objectsResult?.rows;
 	};
@@ -25,7 +25,7 @@ const GamesStore = () => {
 			FROM game_objects go 
 				LEFT JOIN cards c ON go.card_id = c.id 
 			WHERE go.game_session_id = $1`,
-			[id],
+			[id]
 		);
 		return allPartsResult?.rows;
 	};

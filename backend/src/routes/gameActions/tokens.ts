@@ -1,7 +1,7 @@
-import { query } from "../../core/pool";
-import { ActionMethod } from "./types";
-import { v4 as uuidv4 } from "uuid";
-import logger from "../../core/logger";
+import { query } from '../../core/pool';
+import { ActionMethod } from './types';
+import { v4 as uuidv4 } from 'uuid';
+import logger from '../../core/logger';
 
 interface SourceCardResult {
 	card_id: string;
@@ -19,28 +19,23 @@ export const createTokenCopy: ActionMethod = async (
 		tokenCardId?: string; // For battlefield token creation
 		quantity: number;
 		position?: { x: number; y: number };
-	},
+	}
 ) => {
-	logger.info(
-		`Creating token copy with metadata: ${JSON.stringify(metadata)}`,
-	);
+	logger.info(`Creating token copy with metadata: ${JSON.stringify(metadata)}`);
 	const { sourceObjectId, tokenCardId, quantity, position } = metadata;
 
 	if (!tokenCardId && !sourceObjectId) {
-		throw new Error("Either tokenCardId or sourceObjectId is required");
+		throw new Error('Either tokenCardId or sourceObjectId is required');
 	}
 
 	let cardIdToUse: string | null = null;
 
 	// If creating a copy of a card on the battlefield
 	if (sourceObjectId) {
-		const sourceResult = await query<SourceCardResult>(
-			`SELECT card_id FROM game_objects WHERE id = $1`,
-			[sourceObjectId],
-		);
+		const sourceResult = await query<SourceCardResult>(`SELECT card_id FROM game_objects WHERE id = $1`, [sourceObjectId]);
 
 		if (!sourceResult || sourceResult.rows.length === 0) {
-			throw new Error("Source object not found");
+			throw new Error('Source object not found');
 		}
 
 		cardIdToUse = sourceResult.rows[0].card_id;
@@ -56,7 +51,7 @@ export const createTokenCopy: ActionMethod = async (
 			tokenObjectId,
 			gameId,
 			seat,
-			"battlefield",
+			'battlefield',
 			cardIdToUse,
 			true, // is_token
 		];
@@ -89,26 +84,23 @@ export const removeToken: ActionMethod = async (
 	_seat,
 	metadata: {
 		objectId: string;
-	},
+	}
 ) => {
 	const { objectId } = metadata;
 
 	if (!objectId) {
-		throw new Error("objectId is required");
+		throw new Error('objectId is required');
 	}
 
 	// Verify it's actually a token
-	const result = await query<TokenResult>(
-		`SELECT is_token FROM game_objects WHERE id = $1`,
-		[objectId],
-	);
+	const result = await query<TokenResult>(`SELECT is_token FROM game_objects WHERE id = $1`, [objectId]);
 
 	if (!result || result.rows.length === 0) {
-		throw new Error("Object not found");
+		throw new Error('Object not found');
 	}
 
 	if (!result.rows[0].is_token) {
-		throw new Error("Can only remove tokens");
+		throw new Error('Can only remove tokens');
 	}
 
 	// Delete the token

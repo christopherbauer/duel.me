@@ -1,40 +1,30 @@
-import { Router, Request, Response } from "express";
-import { query } from "../core/pool";
-import { v4 as uuidv4 } from "uuid";
-import {
-	GameSession,
-	GameState,
-	GameStateView,
-	DeckCards,
-	CommanderIds,
-	GameStateQueryResult,
-	Card,
-} from "../types/game";
-import logger from "../core/logger";
-import { handleGameAction } from "./gameActions";
-import GamesStore from "../db/GamesStore";
-import GameStateStore from "../db/GameStateStore";
-import { AllPartsQueryResult } from "../db/types";
-import CardsStore from "../db/CardsStore";
-import { NotFoundError } from "../core/errors";
+import { Router, Request, Response } from 'express';
+import { query } from '../core/pool';
+import { v4 as uuidv4 } from 'uuid';
+import { GameSession, GameState, GameStateView, DeckCards, CommanderIds, GameStateQueryResult, Card } from '../types/game';
+import logger from '../core/logger';
+import { handleGameAction } from './gameActions';
+import GamesStore from '../db/GamesStore';
+import GameStateStore from '../db/GameStateStore';
+import { AllPartsQueryResult } from '../db/types';
+import CardsStore from '../db/CardsStore';
+import { NotFoundError } from '../core/errors';
 
 const router = Router();
 //in-memory store tokens for inclusion in gamestate responses
 let tokenRecord: Record<string, Card> = {};
 const retrieveTokens = async () => {
-	logger.info("Retrieving token cards from database...");
-	const tokens = await query<Card>(
-		"SELECT * from cards c where c.layout = 'token'",
-	);
+	logger.info('Retrieving token cards from database...');
+	const tokens = await query<Card>("SELECT * from cards c where c.layout = 'token'");
 	if (!tokens) {
-		throw new Error("Failed to retrieve tokens from database");
+		throw new Error('Failed to retrieve tokens from database');
 	}
 	tokenRecord = Object.values(tokens.rows).reduce(
 		(acc, token) => {
 			acc[token.name] = token;
 			return acc;
 		},
-		{} as Record<string, Card>,
+		{} as Record<string, Card>
 	);
 };
 retrieveTokens();
@@ -48,15 +38,13 @@ retrieveTokens();
  *       200:
  *         description: List of game sessions
  */
-router.get("/", async (req, res) => {
+router.get('/', async (req, res) => {
 	try {
-		const result = await query<GameSession>(
-			`SELECT * FROM game_sessions WHERE status != 'completed' ORDER BY updated_at DESC`,
-		);
+		const result = await query<GameSession>(`SELECT * FROM game_sessions WHERE status != 'completed' ORDER BY updated_at DESC`);
 		res.json(result?.rows);
 	} catch (error) {
-		console.error("Game list error:", error);
-		res.status(500).json({ error: "Failed to fetch games" });
+		console.error('Game list error:', error);
+		res.status(500).json({ error: 'Failed to fetch games' });
 	}
 });
 
@@ -82,34 +70,29 @@ router.get("/", async (req, res) => {
  *       201:
  *         description: Game created and initialized
  */
-router.post("/", async (req, res) => {
+router.post('/', async (req, res) => {
 	const { deck1_id, deck2_id, name } = req.body;
 
 	if (!deck1_id || !deck2_id) {
-		return res
-			.status(400)
-			.json({ error: "Both deck1_id and deck2_id are required" });
+		return res.status(400).json({ error: 'Both deck1_id and deck2_id are required' });
 	}
 
 	try {
 		const gameId = uuidv4();
 
 		// Create game session
-		await query(
-			`INSERT INTO game_sessions (id, name, deck1_id, deck2_id, status) VALUES ($1, $2, $3, $4, 'active')`,
-			[
-				gameId,
-				name || `Game ${new Date().toLocaleString()}`,
-				deck1_id,
-				deck2_id,
-			],
-		);
+		await query(`INSERT INTO game_sessions (id, name, deck1_id, deck2_id, status) VALUES ($1, $2, $3, $4, 'active')`, [
+			gameId,
+			name || `Game ${new Date().toLocaleString()}`,
+			deck1_id,
+			deck2_id,
+		]);
 
 		// Initialize game state
 		await query(
 			`INSERT INTO game_state (game_session_id, seat1_life, seat2_life, active_seat, turn_number)
        VALUES ($1, 40, 40, 1, 1)`,
-			[gameId],
+			[gameId]
 		);
 
 		// Load decks into library zones
@@ -117,7 +100,7 @@ router.post("/", async (req, res) => {
 			const deckId = seat === 1 ? deck1_id : deck2_id;
 			const deckCardsResult = await query<DeckCards>(
 				`SELECT dc.card_id, dc.quantity FROM deck_cards dc WHERE dc.deck_id = $1 AND dc.zone = 'library'`,
-				[deckId],
+				[deckId]
 			);
 			if (!deckCardsResult) continue;
 			let libraryOrder = 0;
@@ -126,36 +109,30 @@ router.post("/", async (req, res) => {
 					await query(
 						`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id, "order")
              VALUES ($1, $2, $3, 'library', $4, $5)`,
-						[uuidv4(), gameId, seat, row.card_id, libraryOrder],
+						[uuidv4(), gameId, seat, row.card_id, libraryOrder]
 					);
 					libraryOrder++;
 				}
 			}
 
 			// Load commanders
-			const deckResult = await query<CommanderIds>(
-				`SELECT commander_ids FROM decks WHERE id = $1`,
-				[deckId],
-			);
+			const deckResult = await query<CommanderIds>(`SELECT commander_ids FROM decks WHERE id = $1`, [deckId]);
 			if (!deckResult) continue;
-			if (
-				deckResult.rows[0]?.commander_ids &&
-				deckResult.rows[0].commander_ids.length > 0
-			) {
+			if (deckResult.rows[0]?.commander_ids && deckResult.rows[0].commander_ids.length > 0) {
 				for (const cmdId of deckResult.rows[0].commander_ids) {
 					await query(
 						`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id)
              VALUES ($1, $2, $3, 'command_zone', $4)`,
-						[uuidv4(), gameId, seat, cmdId],
+						[uuidv4(), gameId, seat, cmdId]
 					);
 				}
 			}
 		}
 
-		res.status(201).json({ id: gameId, name: name || "New Game" });
+		res.status(201).json({ id: gameId, name: name || 'New Game' });
 	} catch (error) {
-		console.error("Game creation error:", error);
-		res.status(500).json({ error: "Failed to create game" });
+		console.error('Game creation error:', error);
+		res.status(500).json({ error: 'Failed to create game' });
 	}
 });
 
@@ -179,15 +156,14 @@ router.post("/", async (req, res) => {
  *       200:
  *         description: Game state with projected visibility
  */
-router.get("/:id", async (req, res) => {
+router.get('/:id', async (req, res) => {
 	const { id } = req.params;
-	const viewerSeat = (parseInt((req.query.viewer_seat as string) || "1") ||
-		1) as 1 | 2;
+	const viewerSeat = (parseInt((req.query.viewer_seat as string) || '1') || 1) as 1 | 2;
 
 	try {
 		const gameStateResult = await GameStateStore().getGameState(id);
 		if (!gameStateResult) {
-			throw new Error("Failed to retrieve game state");
+			throw new Error('Failed to retrieve game state');
 		}
 
 		// Get game state
@@ -195,21 +171,21 @@ router.get("/:id", async (req, res) => {
 			.getGamesObjects(id)
 			.then((result) => {
 				if (!result) {
-					throw new Error("Failed to retrieve game objects");
+					throw new Error('Failed to retrieve game objects');
 				}
 				return result;
 			})
 			.catch((err) => {
 				logger.error(err);
-				res.status(404).json({ error: "Game not found" });
-				throw new Error("Failed to retrieve game objects");
+				res.status(404).json({ error: 'Game not found' });
+				throw new Error('Failed to retrieve game objects');
 			});
 		logger.debug(JSON.stringify(objectsResult));
 
 		// Project visibility: hide opponent's hand and library
 		const projectedObjects = objectsResult.map((obj) => {
 			const isOpponent = obj.seat !== viewerSeat;
-			const isHiddenZone = obj.zone === "hand" || obj.zone === "library";
+			const isHiddenZone = obj.zone === 'hand' || obj.zone === 'library';
 
 			return {
 				id: obj.id,
@@ -244,9 +220,7 @@ router.get("/:id", async (req, res) => {
 		});
 		logger.debug(JSON.stringify(projectedObjects));
 		if (!projectedObjects) {
-			return res
-				.status(500)
-				.json({ error: "Failed to project game objects" });
+			return res.status(500).json({ error: 'Failed to project game objects' });
 		}
 		const view: GameStateView = {
 			game_session_id: gameStateResult.game_session_id,
@@ -261,8 +235,8 @@ router.get("/:id", async (req, res) => {
 
 		res.json(view);
 	} catch (error) {
-		console.error("Game fetch error:", error);
-		res.status(500).json({ error: "Failed to fetch game" });
+		console.error('Game fetch error:', error);
+		res.status(500).json({ error: 'Failed to fetch game' });
 	}
 });
 
@@ -296,19 +270,15 @@ router.get("/:id", async (req, res) => {
  *       200:
  *         description: Action executed
  */
-router.post("/:id/action", async (req: Request, res: Response) => {
+router.post('/:id/action', async (req: Request, res: Response) => {
 	const { id } = req.params;
 	const { seat, action_type, target_object_id, metadata = {} } = req.body;
 
 	if (!seat || !action_type) {
-		return res
-			.status(400)
-			.json({ error: "seat and action_type are required" });
+		return res.status(400).json({ error: 'seat and action_type are required' });
 	}
 
-	logger.info(
-		`Received action: ${action_type} with metadata: ${JSON.stringify(metadata)}`,
-	);
+	logger.info(`Received action: ${action_type} with metadata: ${JSON.stringify(metadata)}`);
 
 	try {
 		const actionId = uuidv4();
@@ -317,33 +287,26 @@ router.post("/:id/action", async (req: Request, res: Response) => {
 		await query(
 			`INSERT INTO game_actions (id, game_session_id, seat, action_type, target_object_id, metadata)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-			[
-				actionId,
-				id,
-				seat,
-				action_type,
-				target_object_id || null,
-				JSON.stringify(metadata),
-			],
+			[actionId, id, seat, action_type, target_object_id || null, JSON.stringify(metadata)]
 		);
 
 		await handleGameAction(action_type, id, seat, metadata);
 
 		res.json({ success: true, action_id: actionId });
 	} catch (error) {
-		console.error("Game action error:", error);
-		res.status(500).json({ error: "Failed to execute action" });
+		console.error('Game action error:', error);
+		res.status(500).json({ error: 'Failed to execute action' });
 	}
 });
 
-router.get("/:id/tokens", async (req, res) => {
+router.get('/:id/tokens', async (req, res) => {
 	const { id } = req.params;
 	const extractTokens = (objects: AllPartsQueryResult[]) => {
 		const tokens: Record<string, { id: string; name: string }> = {};
 		for (const obj of objects) {
 			if (obj.all_parts && obj.all_parts.length > 0) {
 				for (const part of obj.all_parts) {
-					if (part.component === "token" && part.name) {
+					if (part.component === 'token' && part.name) {
 						// Deduplicate by token name, not ID
 						if (!tokens[part.name]) {
 							tokens[part.name] = {
@@ -365,9 +328,7 @@ router.get("/:id/tokens", async (req, res) => {
 			if (tokenCard) {
 				return tokenCard;
 			} else {
-				logger.warn(
-					`Token card not found for token name: ${tokenInfo.name}`,
-				);
+				logger.warn(`Token card not found for token name: ${tokenInfo.name}`);
 				return null;
 			}
 		})
@@ -376,14 +337,14 @@ router.get("/:id/tokens", async (req, res) => {
 	res.json(gameTokens);
 });
 
-router.get("/:id/components", async (req, res) => {
+router.get('/:id/components', async (req, res) => {
 	const { id } = req.params;
 	const extractComponents = (objects: AllPartsQueryResult[]) => {
 		const tokens: Record<string, { id: string; name: string }> = {};
 		for (const obj of objects) {
 			if (obj.all_parts && obj.all_parts.length > 0) {
 				for (const part of obj.all_parts) {
-					if (part.component === "combo_piece" && part.name) {
+					if (part.component === 'combo_piece' && part.name) {
 						// Deduplicate by token name, not ID
 						if (!tokens[part.name]) {
 							tokens[part.name] = {
@@ -399,20 +360,12 @@ router.get("/:id/components", async (req, res) => {
 	};
 	const allPartsResult = await GamesStore().getAllParts(id);
 	const gameComponentList = extractComponents(allPartsResult || []);
-	const uniqueGameComponents = new Set(
-		Object.values(gameComponentList).map(
-			(componentInfo) => componentInfo.name,
-		),
-	);
-	const componentCards = await CardsStore().getCardsByName(
-		Array.from(uniqueGameComponents),
-	);
+	const uniqueGameComponents = new Set(Object.values(gameComponentList).map((componentInfo) => componentInfo.name));
+	const componentCards = await CardsStore().getCardsByName(Array.from(uniqueGameComponents));
 	if (!componentCards) {
 		throw new NotFoundError();
 	}
-	const gameComponents = componentCards.sort((a, b) =>
-		a.name.localeCompare(b.name),
-	);
+	const gameComponents = componentCards.sort((a, b) => a.name.localeCompare(b.name));
 	res.json(gameComponents);
 });
 

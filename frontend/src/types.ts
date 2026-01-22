@@ -10,8 +10,4 @@ export interface CreateGameRequest {
 	name: string;
 }
 
-export type ActionMethod = (
-	action: string,
-	seat?: number,
-	metadata?: any,
-) => void;
+export type ActionMethod = (action: string, seat?: number, metadata?: any) => void;

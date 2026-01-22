@@ -1,7 +1,7 @@
-import express, { Router } from "express";
-import { query } from "../core/pool";
-import { v4 as uuidv4 } from "uuid";
-import { Card } from "../types/game";
+import express, { Router } from 'express';
+import { query } from '../core/pool';
+import { v4 as uuidv4 } from 'uuid';
+import { Card } from '../types/game';
 
 const router = Router();
 
@@ -32,11 +32,11 @@ const router = Router();
  *               items:
  *                 type: object
  */
-router.get("/search", async (req, res) => {
+router.get('/search', async (req, res) => {
 	const { q, limit = 20 } = req.query;
 
-	if (!q || typeof q !== "string") {
-		return res.status(400).json({ error: "q parameter is required" });
+	if (!q || typeof q !== 'string') {
+		return res.status(400).json({ error: 'q parameter is required' });
 	}
 
 	try {
@@ -45,12 +45,12 @@ router.get("/search", async (req, res) => {
        FROM cards 
        WHERE name ILIKE $1 
        LIMIT $2`,
-			[`${q}%`, Math.min(parseInt(limit as string) || 20, 100)],
+			[`${q}%`, Math.min(parseInt(limit as string) || 20, 100)]
 		);
 		res.json(result?.rows);
 	} catch (error) {
-		console.error("Card search error:", error);
-		res.status(500).json({ error: "Card search failed" });
+		console.error('Card search error:', error);
+		res.status(500).json({ error: 'Card search failed' });
 	}
 });
 
@@ -69,18 +69,18 @@ router.get("/search", async (req, res) => {
  *       200:
  *         description: Card details
  */
-router.get("/:id", async (req, res) => {
+router.get('/:id', async (req, res) => {
 	const { id } = req.params;
 
 	try {
-		const result = await query("SELECT * FROM cards WHERE id = $1", [id]);
+		const result = await query('SELECT * FROM cards WHERE id = $1', [id]);
 		if (result && result.rows && result.rows.length === 0) {
-			return res.status(404).json({ error: "Card not found" });
+			return res.status(404).json({ error: 'Card not found' });
 		}
 		res.json(result?.rows[0]);
 	} catch (error) {
-		console.error("Card fetch error:", error);
-		res.status(500).json({ error: "Card fetch failed" });
+		console.error('Card fetch error:', error);
+		res.status(500).json({ error: 'Card fetch failed' });
 	}
 });
 

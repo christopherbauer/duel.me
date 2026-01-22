@@ -46,3 +46,6 @@ clean:
 	rm -rf backend/dist backend/node_modules
 	rm -rf frontend/dist frontend/build frontend/node_modules
 	docker compose down -v
+
+format:
+	npx prettier --write .

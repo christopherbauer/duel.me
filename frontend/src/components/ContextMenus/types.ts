@@ -1,9 +1,9 @@
 export enum ContextMenuType {
-	Library = "library",
-	Hand = "hand",
-	Graveyard = "graveyard",
-	Exile = "exile",
-	Battlefield = "battlefield",
+	Library = 'library',
+	Hand = 'hand',
+	Graveyard = 'graveyard',
+	Exile = 'exile',
+	Battlefield = 'battlefield',
 }
 
 export interface MenuItem {

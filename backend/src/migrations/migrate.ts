@@ -1,10 +1,10 @@
-import logger from "../core/logger";
-import { query } from "../core/pool";
-import { migrations } from "./scripts";
+import logger from '../core/logger';
+import { query } from '../core/pool';
+import { migrations } from './scripts';
 
 export async function migrate() {
 	try {
-		logger.info("Starting database migrations...");
+		logger.info('Starting database migrations...');
 		for (const migration of migrations) {
 			await query(migration);
 		}

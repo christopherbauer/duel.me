@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 
 export interface GameState {
 	game_session_id: string;
@@ -47,16 +47,16 @@ export interface ImageUris {
 }
 
 export enum Color {
-	B = "B",
-	G = "G",
-	R = "R",
-	U = "U",
-	W = "W",
+	B = 'B',
+	G = 'G',
+	R = 'R',
+	U = 'U',
+	W = 'W',
 }
 
 export enum Layout {
-	Class = "class",
-	Normal = "normal",
+	Class = 'class',
+	Normal = 'normal',
 }
 
 export interface Counters {
@@ -72,10 +72,10 @@ export interface Position {
 }
 
 export enum Zone {
-	Battlefield = "battlefield",
-	CommandZone = "command_zone",
-	Library = "library",
-	Exile = "exile",
+	Battlefield = 'battlefield',
+	CommandZone = 'command_zone',
+	Library = 'library',
+	Exile = 'exile',
 }
 
 export interface GameStore {
@@ -104,8 +104,7 @@ export const useGameStore = create<GameStore>((set) => ({
 	setViewerSeat: (seat: 1 | 2) => set({ viewerSeat: seat }),
 	setGameState: (state: GameState) => set({ gameState: state }),
 	setAvailableTokens: (tokens: Card[]) => set({ availableTokens: tokens }),
-	setAvailableComponents: (components: Card[]) =>
-		set({ availableComponents: components }),
+	setAvailableComponents: (components: Card[]) => set({ availableComponents: components }),
 	clearGame: () =>
 		set({
 			currentGameId: null,

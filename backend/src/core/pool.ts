@@ -1,12 +1,12 @@
-import { Pool } from "pg";
-import logger from "./logger";
+import { Pool } from 'pg';
+import logger from './logger';
 
 const pool = new Pool({
 	connectionString: process.env.DATABASE_URL,
 });
 
-pool.on("error", (err: Error) => {
-	console.error("Unexpected error on idle client", err);
+pool.on('error', (err: Error) => {
+	console.error('Unexpected error on idle client', err);
 });
 
 export async function query<T>(text: string, params?: any[]) {
@@ -19,7 +19,7 @@ export async function query<T>(text: string, params?: any[]) {
 				text,
 				duration,
 				rows: res.rowCount,
-			})}`,
+			})}`
 		);
 		return res as { rows: T[]; rowCount: number };
 	} catch (error) {

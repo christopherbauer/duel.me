@@ -1,5 +1,5 @@
-import { query } from "../../core/pool";
-import { ActionMethod } from "./types";
+import { query } from '../../core/pool';
+import { ActionMethod } from './types';
 
 export const moveToBattlefield: ActionMethod = async (
 	_id,
@@ -7,7 +7,7 @@ export const moveToBattlefield: ActionMethod = async (
 	metadata: {
 		objectId: string;
 		position?: { x: number; y: number };
-	},
+	}
 ) => {
 	// metadata.objectId contains the card ID to move
 	// metadata.position contains { x, y } coordinates
@@ -35,20 +35,14 @@ export const moveToGraveyard: ActionMethod = async (_id, _seat, metadata) => {
 	const objectId = metadata.objectId;
 	if (objectId) {
 		// Check if it's a token
-		const checkToken = await query<{ is_token: boolean }>(
-			`SELECT is_token FROM game_objects WHERE id = $1`,
-			[objectId],
-		);
+		const checkToken = await query<{ is_token: boolean }>(`SELECT is_token FROM game_objects WHERE id = $1`, [objectId]);
 
 		if (checkToken?.rows?.[0]?.is_token) {
 			// Delete token
 			await query(`DELETE FROM game_objects WHERE id = $1`, [objectId]);
 		} else {
 			// Move card to graveyard
-			await query(
-				`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`,
-				[objectId],
-			);
+			await query(`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`, [objectId]);
 		}
 	}
 };
@@ -56,19 +50,14 @@ export const moveToGraveyard: ActionMethod = async (_id, _seat, metadata) => {
 export const moveToHand: ActionMethod = async (_id, _seat, metadata) => {
 	// Move card back to hand from graveyard or exile
 	const objectId = metadata.objectId;
-	const checkToken = await query<{ is_token: boolean }>(
-		`SELECT is_token FROM game_objects WHERE id = $1`,
-		[objectId],
-	);
+	const checkToken = await query<{ is_token: boolean }>(`SELECT is_token FROM game_objects WHERE id = $1`, [objectId]);
 
 	if (checkToken?.rows?.[0]?.is_token) {
 		// Delete token
 		await query(`DELETE FROM game_objects WHERE id = $1`, [objectId]);
 	} else {
 		if (objectId) {
-			await query(`UPDATE game_objects SET zone = 'hand' WHERE id = $1`, [
-				objectId,
-			]);
+			await query(`UPDATE game_objects SET zone = 'hand' WHERE id = $1`, [objectId]);
 		}
 	}
 };

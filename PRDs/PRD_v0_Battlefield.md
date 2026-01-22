@@ -146,9 +146,9 @@ Right-clicking or command-clicking the library opens a context menu with the fol
 - Selecting Scry or Surveil opens a popup panel
 - The top X cards are revealed
 - Cards can be dragged to:
-    - Top of library
-    - Bottom of library (Scry only)
-    - Graveyard (Surveil only)
+  - Top of library
+  - Bottom of library (Scry only)
+  - Graveyard (Surveil only)
 - All cards must be assigned before confirming
 
 ---
@@ -195,8 +195,8 @@ Right-clicking or command-clicking a card in play opens a context menu with:
 
 - Cards are arranged in a horizontal row
 - As the cursor moves across the hand:
-    - The nearest card enlarges
-    - Neighboring cards compress to make space
+  - The nearest card enlarges
+  - Neighboring cards compress to make space
 - No scrolling is used
 
 ---
@@ -227,11 +227,11 @@ End Turn is also bound to the spacebar.
 - Undo and Redo controls are always visible
 - Users may step backward or forward through actions
 - Supported actions include:
-    - Card movement
-    - Tapping/untapping
-    - Destroy/exile
-    - Token creation
-    - Drawing cards
+  - Card movement
+  - Tapping/untapping
+  - Destroy/exile
+  - Token creation
+  - Drawing cards
 
 ---
 
@@ -246,8 +246,8 @@ Available options:
 - Card size selector (1× / 2× / 4×)
 - Toggle opponent card inversion
 - Restart game:
-    - Restart from original hands
-    - Restart entire game (reshuffle)
+  - Restart from original hands
+  - Restart entire game (reshuffle)
 
 All restart actions require confirmation.
 

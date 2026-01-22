@@ -1,5 +1,5 @@
 export type ActionMethod = (
 	id: string, // Object Id
 	seat: number,
-	metadata: any,
+	metadata: any
 ) => Promise<void>;
