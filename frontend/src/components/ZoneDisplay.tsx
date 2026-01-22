@@ -438,8 +438,8 @@ export const zoneStyles = {
 		padding: "5px",
 	},
 	libraryCardBack: {
-		width: "100%",
-		maxWidth: "100px",
+		width: "auto",
+		height: "100%",
 		aspectRatio: "60 / 85",
 		border: "2px solid #0d1f2d",
 		borderRadius: "4px",
@@ -464,8 +464,8 @@ export const zoneStyles = {
 	},
 	stackContainer: {
 		position: "relative" as const,
-		width: "100%",
-		maxWidth: "100px",
+		width: "auto",
+		height: "100%",
 		aspectRatio: "60 / 85",
 	},
 	stackedCard: {
