@@ -318,7 +318,8 @@ const Submenu = ({ item, type, onMenuItemClick }: SubmenuProps) => {
 							}}
 							onMouseLeave={(e) => {
 								// Don't close if moving to a child submenu
-								const relatedTarget = e.relatedTarget as HTMLElement;
+								const relatedTarget =
+									e.relatedTarget as HTMLElement;
 								if (
 									relatedTarget &&
 									(relatedTarget.closest("[data-submenu]") ||
