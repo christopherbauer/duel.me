@@ -1,13 +1,10 @@
-import { AllPart } from "../seed/types";
+import { AllPart } from '../seed/types';
 
-export type CardId = Pick<Card, "id">;
-export type CommanderIds = Pick<Deck, "commander_ids">;
-export type DeckCards = Omit<DeckCard, "deck_id" | "zone">;
-export type DeckDetails = Omit<DeckCard, "deck_id" | "card_id"> &
-	Pick<
-		Card,
-		"id" | "name" | "type_line" | "mana_cost" | "colors" | "image_uris"
-	>;
+export type CardId = Pick<Card, 'id'>;
+export type CommanderIds = Pick<Deck, 'commander_ids'>;
+export type DeckCards = Omit<DeckCard, 'deck_id' | 'zone'>;
+export type DeckDetails = Omit<DeckCard, 'deck_id' | 'card_id'> &
+	Pick<Card, 'id' | 'name' | 'type_line' | 'mana_cost' | 'colors' | 'image_uris'>;
 
 export interface Card {
 	id: string;
@@ -50,13 +47,13 @@ export interface DeckCard {
 	deck_id: string;
 	card_id: string;
 	quantity: number;
-	zone: "library" | "commander" | "sideboard";
+	zone: 'library' | 'commander' | 'sideboard';
 }
 
 export interface GameSession {
 	id: string;
 	name?: string;
-	status: "active" | "paused" | "completed";
+	status: 'active' | 'paused' | 'completed';
 	deck1_id: string;
 	deck2_id: string;
 	created_at: string;
@@ -64,13 +61,9 @@ export interface GameSession {
 	completed_at?: string;
 }
 
-export type GameStateQueryResult = Omit<
-	GameObject,
-	"game_session_id" | "attachments" | "created_at" | "updated_at"
-> &
-	Card;
+export type GameStateQueryResult = Omit<GameObject, 'game_session_id' | 'attachments' | 'created_at' | 'updated_at'> & Card;
 
-export type GameObjectId = Pick<GameObject, "id">;
+export type GameObjectId = Pick<GameObject, 'id'>;
 export interface GameObject {
 	id: string;
 	game_session_id: string;
@@ -88,14 +81,7 @@ export interface GameObject {
 	updated_at: string;
 }
 
-export type Zone =
-	| "library"
-	| "hand"
-	| "battlefield"
-	| "graveyard"
-	| "exile"
-	| "command_zone"
-	| "stack";
+export type Zone = 'library' | 'hand' | 'battlefield' | 'graveyard' | 'exile' | 'command_zone' | 'stack';
 
 export interface GameState {
 	game_session_id: string;
@@ -118,7 +104,11 @@ export interface GameAction {
 	metadata?: Record<string, any>;
 	created_at: string;
 }
-
+export interface Indicator {
+	id: string;
+	position: { x: number; y: number };
+	color: string;
+}
 // Visibility/Projection types
 export interface GameStateView {
 	game_session_id: string;
@@ -130,6 +120,7 @@ export interface GameStateView {
 	turn_number: number;
 	// Zones are projected based on viewer seat
 	objects: GameObjectView[];
+	indicators?: Indicator[];
 }
 
 export interface GameObjectView {

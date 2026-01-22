@@ -1,13 +1,13 @@
-import { tap, untap, toggle_tap } from "./tap";
-import { shuffleLibrary } from "./shuffle";
-import { drawFromLibrary, moveToLibrary, scry, surveil } from "./library";
-import { lifeChange } from "./lifeChange";
-import { exileTopFromLibrary, moveToExile } from "./exile";
-import { moveToHand } from "./hand";
-import { moveToBattlefield, moveToGraveyard } from "./play";
-import { ActionMethod } from "./types";
-import { query } from "../../db/pool";
-import { addCounter, removeCounter } from "./counters";
+import { tap, untap, toggleTap, untapAll } from './tap';
+import { drawFromLibrary, moveToLibrary, scry, shuffleLibrary, surveil } from './library';
+import { lifeChange } from './lifeChange';
+import { exileTopFromLibrary, moveToExile } from './exile';
+import { moveToBattlefield, moveToGraveyard, moveToHand } from './play';
+import { createTokenCopy, removeToken } from './tokens';
+import { createIndicator, moveIndicator, deleteIndicator } from './indicators';
+import { ActionMethod } from './types';
+import { query } from '../../core/pool';
+import { addCounter, removeCounter } from './counters';
 
 enum Actions {
 	tap,
@@ -27,12 +27,19 @@ enum Actions {
 	discard,
 	add_counter,
 	remove_counter,
+	create_token_copy,
+	remove_token,
+	untap_all,
+	create_indicator,
+	move_indicator,
+	delete_indicator,
 }
 
 const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	tap: tap,
 	untap: untap,
-	toggle_tap: toggle_tap,
+	untap_all: untapAll,
+	toggle_tap: toggleTap,
 	shuffle_library: shuffleLibrary,
 	draw: drawFromLibrary,
 	life_change: lifeChange,
@@ -47,16 +54,17 @@ const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	discard: moveToGraveyard,
 	add_counter: addCounter,
 	remove_counter: removeCounter,
+	create_token_copy: createTokenCopy,
+	remove_token: removeToken,
+	create_indicator: createIndicator,
+	move_indicator: moveIndicator,
+	delete_indicator: deleteIndicator,
 };
-export const handleGameAction = async (
-	action: keyof typeof Actions,
-	id: string,
-	seat: number,
-	metadata: any,
-) => {
-	const result = await actionMap[action](id, seat, metadata);
-	await query(`UPDATE game_sessions SET updated_at = NOW() WHERE id = $1`, [
-		id,
-	]);
+export const handleGameAction = async (action: keyof typeof Actions, gameId: string, seat: number, metadata: any) => {
+	console.log(`handleGameAction called with action: ${String(action)}`);
+	console.log(`actionMap keys:`, Object.keys(actionMap));
+	console.log(`action in actionMap:`, action in actionMap);
+	const result = await actionMap[action](gameId, seat, metadata);
+	await query(`UPDATE game_sessions SET updated_at = NOW() WHERE id = $1`, [gameId]);
 	return result;
 };

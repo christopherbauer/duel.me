@@ -1,74 +1,60 @@
-import { createReadStream } from "fs";
-import { createInterface } from "readline";
-import https from "https";
-import { query } from "../db/pool";
-import crypto from "crypto";
-import {
-	AppCard,
-	BulkCardResponse,
-	BulkDataResponse,
-	ScryfallCard,
-} from "./types";
-import { IncomingMessage } from "http";
-import logger from "../core/logger";
+import { createReadStream } from 'fs';
+import { createInterface } from 'readline';
+import https from 'https';
+import { query } from '../core/pool';
+import crypto from 'crypto';
+import { AppCard, BulkCardResponse, BulkDataResponse, ScryfallCard } from './types';
+import { IncomingMessage } from 'http';
+import logger from '../core/logger';
 
 // Fetch latest bulk data URL from Scryfall
 async function getLatestBulkUrl(): Promise<string> {
 	return new Promise((resolve, reject) => {
 		const options = {
-			hostname: "api.scryfall.com",
-			path: "/bulk-data",
+			hostname: 'api.scryfall.com',
+			path: '/bulk-data',
 			headers: {
-				"User-Agent":
-					"duel.me/0.1.0 (+https://github.com/christopherbauer/duel.me)",
-				Accept: "application/json",
+				'User-Agent': 'duel.me/0.1.0 (+https://github.com/christopherbauer/duel.me)',
+				Accept: 'application/json',
 			},
 		};
 
 		https
 			.get(options, (response) => {
-				let data = "";
-				response.on("data", (chunk: string) => (data += chunk));
-				response.on("end", () => {
+				let data = '';
+				response.on('data', (chunk: string) => (data += chunk));
+				response.on('end', () => {
 					try {
 						const json = JSON.parse(data) as BulkDataResponse;
-						const oracleCards = json.data?.find(
-							(item) => item.type === "oracle_cards"
-						);
+						const oracleCards = json.data?.find((item) => item.type === 'oracle_cards');
 						if (oracleCards && oracleCards.download_uri) {
 							resolve(oracleCards.download_uri);
 						} else {
-							reject(
-								new Error(
-									`Oracle cards not found in bulk data. Got: ${JSON.stringify(
-										json
-									).substring(0, 200)}`
-								)
-							);
+							reject(new Error(`Oracle cards not found in bulk data. Got: ${JSON.stringify(json).substring(0, 200)}`));
 						}
 					} catch (e) {
 						reject(e);
 					}
 				});
 			})
-			.on("error", reject);
+			.on('error', reject);
 	});
 }
 
-let SCRYFALL_BULK_URL: string = "";
+let SCRYFALL_BULK_URL: string = '';
 
 async function downloadAndSeedCards() {
-	logger.info("Fetching latest Scryfall bulk data URL...");
+	logger.info('Fetching latest Scryfall bulk data URL...');
 	try {
 		SCRYFALL_BULK_URL = await getLatestBulkUrl();
 		logger.info(`Using: ${SCRYFALL_BULK_URL}`);
 	} catch (error) {
-		logger.info("Failed to fetch Scryfall bulk data URL");
+		logger.info('Failed to fetch Scryfall bulk data URL');
 		logger.catchError(error);
 		throw error;
 	}
 
-	logger.info("Starting Scryfall bulk card import...");
+	logger.info('Starting Scryfall bulk card import...');
 	return new Promise<void>((resolve, reject) => {
 		const handleResponse = async (response: IncomingMessage) => {
 			// Handle redirects
@@ -76,49 +62,41 @@ async function downloadAndSeedCards() {
 				const redirectUrl = response.headers.location;
 				logger.info(`Following redirect to: ${redirectUrl}`);
 				if (!redirectUrl) {
-					throw new Error("Redirect location missing");
+					throw new Error('Redirect location missing');
 				}
-				https.get(redirectUrl, handleResponse).on("error", reject);
+				https.get(redirectUrl, handleResponse).on('error', reject);
 				return;
 			}
 
 			if (!response || response.statusCode !== 200) {
-				return reject(
-					new Error(`Failed to download: ${response?.statusCode}`)
-				);
+				return reject(new Error(`Failed to download: ${response?.statusCode}`));
 			}
 
 			try {
-				let buffer = "";
+				let buffer = '';
 				let cardCount = 0;
 				const batchSize = 50;
 				let batch: AppCard[] = [];
-				let hasher = crypto.createHash("sha256");
+				let hasher = crypto.createHash('sha256');
 
-				response.on("data", async (chunk: Buffer) => {
+				response.on('data', async (chunk: Buffer) => {
 					const str = chunk.toString();
 					hasher.update(str);
 					buffer += str;
 
 					// Process complete lines only, keep incomplete line in buffer
-					const lines = buffer.split("\n");
+					const lines = buffer.split('\n');
 					// Last element is incomplete (or empty if buffer ends with \n)
-					buffer = lines.pop() || "";
+					buffer = lines.pop() || '';
 
 					for (const line of lines) {
 						const trimmed = line.trim();
 
 						// Skip array markers and empty lines
-						if (
-							trimmed === "[" ||
-							trimmed === "]" ||
-							trimmed === "" ||
-							trimmed === ","
-						)
-							continue;
+						if (trimmed === '[' || trimmed === ']' || trimmed === '' || trimmed === ',') continue;
 
 						let cleanLine = trimmed;
-						if (cleanLine.endsWith(",")) {
+						if (cleanLine.endsWith(',')) {
 							cleanLine = cleanLine.slice(0, -1);
 						}
 
@@ -132,31 +110,23 @@ async function downloadAndSeedCards() {
 								response.pause();
 								await insertCardBatch(batch);
 								batch = [];
-								logger.info(
-									`Processed ${cardCount} cards... (Memory: ${Math.round(
-										process.memoryUsage().heapUsed /
-											1024 /
-											1024
-									)}MB)`
-								);
+								logger.info(`Processed ${cardCount} cards... (Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB)`);
 								response.resume();
 							}
 						} catch (error) {
-							logger.error(
-								`Line parse error (skipping) L${line}`
-							);
+							logger.error(`Line parse error (skipping) L${line}`);
 							logger.catchError(error);
 						}
 					}
 				});
 
-				response.on("end", async () => {
+				response.on('end', async () => {
 					// Insert remaining batch
 					if (batch.length > 0) {
 						await insertCardBatch(batch);
 					}
 
-					const checksum = hasher.digest("hex");
+					const checksum = hasher.digest('hex');
 
 					// Record snapshot metadata
 					await query(
@@ -173,7 +143,7 @@ async function downloadAndSeedCards() {
 			}
 		};
 
-		https.get(SCRYFALL_BULK_URL, handleResponse).on("error", reject);
+		https.get(SCRYFALL_BULK_URL, handleResponse).on('error', reject);
 	});
 }
 
@@ -182,29 +152,21 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 	const values = cards
 		.map((card, i) => {
 			const offset = i * 39;
-			return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${
-				offset + 4
-			}::jsonb, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${
+			return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}::jsonb, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${
 				offset + 8
-			}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${
-				offset + 12
-			}, $${offset + 13}, $${offset + 14}, $${offset + 15}, $${
+			}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15}, $${
 				offset + 16
 			}::jsonb, $${offset + 17}, $${offset + 18}, $${offset + 19}, $${
 				offset + 20
 			}, $${offset + 21}, $${offset + 22}, $${offset + 23}::jsonb, $${
 				offset + 24
-			}::jsonb, $${offset + 25}::jsonb, $${offset + 26}::jsonb, $${
-				offset + 27
-			}::jsonb, $${offset + 28}::jsonb, $${offset + 29}, $${
+			}::jsonb, $${offset + 25}::jsonb, $${offset + 26}::jsonb, $${offset + 27}::jsonb, $${offset + 28}::jsonb, $${offset + 29}, $${
 				offset + 30
-			}, $${offset + 31}::jsonb, $${offset + 32}::jsonb, $${
-				offset + 33
-			}::jsonb, $${offset + 34}, $${offset + 35}, $${offset + 36}, $${
+			}, $${offset + 31}::jsonb, $${offset + 32}::jsonb, $${offset + 33}::jsonb, $${offset + 34}, $${offset + 35}, $${offset + 36}, $${
 				offset + 37
 			}, $${offset + 38}, $${offset + 39})`;
 		})
-		.join(",");
+		.join(',');
 
 	const params = cards.flatMap((card) => [
 		card.object,
@@ -282,9 +244,9 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 export async function seedCards() {
 	try {
 		await downloadAndSeedCards();
-		logger.info("Card seeding completed");
+		logger.info('Card seeding completed');
 	} catch (error) {
-		logger.info("Card seeding failed");
+		logger.info('Card seeding failed');
 		logger.catchError(error);
 		process.exit(1);
 	}

@@ -1,16 +1,11 @@
-import { query } from "../../db/pool";
-import { ActionMethod } from "./types";
+import { query } from '../../core/pool';
+import { ActionMethod } from './types';
 
-export const moveToBattlefield: ActionMethod = async (
-	_id,
-	_seat,
-	metadata: {
-		objectId: string;
-		position?: { x: number; y: number };
-	},
-) => {
-	// metadata.objectId contains the card ID to move
-	// metadata.position contains { x, y } coordinates
+interface MoveToBattlefieldMetadata {
+	objectId: string;
+	position?: { x: number; y: number };
+}
+export const moveToBattlefield: ActionMethod<MoveToBattlefieldMetadata> = async (_gameId, _seat, metadata) => {
 	const objectId = metadata.objectId;
 	const position = metadata.position;
 	if (objectId) {
@@ -29,13 +24,35 @@ export const moveToBattlefield: ActionMethod = async (
 	}
 };
 
-export const moveToGraveyard: ActionMethod = async (_id, _seat, metadata) => {
+export const moveToGraveyard: ActionMethod = async (_gameId, _seat, metadata) => {
 	// Move card to graveyard from battlefield or hand
+	// If it's a token, delete it instead
 	const objectId = metadata.objectId;
 	if (objectId) {
-		await query(
-			`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`,
-			[objectId],
-		);
+		// Check if it's a token
+		const checkToken = await query<{ is_token: boolean }>(`SELECT is_token FROM game_objects WHERE id = $1`, [objectId]);
+
+		if (checkToken?.rows?.[0]?.is_token) {
+			// Delete token
+			await query(`DELETE FROM game_objects WHERE id = $1`, [objectId]);
+		} else {
+			// Move card to graveyard
+			await query(`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`, [objectId]);
+		}
+	}
+};
+
+export const moveToHand: ActionMethod = async (_gameId, _seat, metadata) => {
+	// Move card back to hand from graveyard or exile
+	const objectId = metadata.objectId;
+	const checkToken = await query<{ is_token: boolean }>(`SELECT is_token FROM game_objects WHERE id = $1`, [objectId]);
+
+	if (checkToken?.rows?.[0]?.is_token) {
+		// Delete token
+		await query(`DELETE FROM game_objects WHERE id = $1`, [objectId]);
+	} else {
+		if (objectId) {
+			await query(`UPDATE game_objects SET zone = 'hand' WHERE id = $1`, [objectId]);
+		}
 	}
 };

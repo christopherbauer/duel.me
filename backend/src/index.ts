@@ -1,14 +1,14 @@
-import express from "express";
-import cors from "cors";
-import swaggerUi from "swagger-ui-express";
-import swaggerJsdoc from "swagger-jsdoc";
-import { migrate } from "./migrations/migrate";
-import { query, closePool } from "./db/pool";
-import cardsRouter from "./routes/cards";
-import decksRouter from "./routes/decks";
-import gamesRouter from "./routes/games";
-import logger from "./core/logger";
-import { requestLogHandler } from "./core/requestLogHandler";
+import express from 'express';
+import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'swagger-jsdoc';
+import { migrate } from './migrations/migrate';
+import { query, closePool } from './core/pool';
+import cardsRouter from './routes/cards';
+import decksRouter from './routes/decks';
+import gamesRouter from './routes/games';
+import logger from './core/logger';
+import { requestLogHandler } from './core/middlewares/requestLogHandler';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,52 +20,45 @@ app.use(express.json());
 // Swagger setup
 const swaggerOptions = {
 	definition: {
-		openapi: "3.0.0",
+		openapi: '3.0.0',
 		info: {
-			title: "duel.me API",
-			version: "0.1.0",
-			description: "Commander Duel Playtester API",
+			title: 'duel.me API',
+			version: '0.1.0',
+			description: 'Commander Duel Playtester API',
 		},
 		servers: [
 			{
 				url: `http://localhost:${PORT}`,
-				description: "Development server",
+				description: 'Development server',
 			},
 		],
 	},
-	apis: ["./src/routes/*.ts"],
+	apis: ['./src/routes/*.ts'],
 };
 
 app.use(requestLogHandler);
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health check
-app.get("/health", (req, res) => {
-	res.json({ status: "ok" });
+app.get('/health', (req, res) => {
+	res.json({ status: 'ok' });
 });
 
 // Routes
-app.use("/api/cards", cardsRouter);
-app.use("/api/decks", decksRouter);
-app.use("/api/games", gamesRouter);
+app.use('/api/cards', cardsRouter);
+app.use('/api/decks', decksRouter);
+app.use('/api/games', gamesRouter);
 
 // Error handling
-app.use(
-	(
-		err: any,
-		req: express.Request,
-		res: express.Response,
-		next: express.NextFunction
-	) => {
-		console.error("Unhandled error:", err);
-		res.status(500).json({ error: "Internal server error" });
-	}
-);
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+	console.error('Unhandled error:', err);
+	res.status(500).json({ error: 'Internal server error' });
+});
 
 // Graceful shutdown
-process.on("SIGTERM", async () => {
-	logger.error("SIGTERM signal received: closing HTTP server");
+process.on('SIGTERM', async () => {
+	logger.error('SIGTERM signal received: closing HTTP server');
 	await closePool();
 	process.exit(0);
 });
@@ -73,18 +66,16 @@ process.on("SIGTERM", async () => {
 // Initialize and start
 async function main() {
 	try {
-		logger.info("Initializing database...");
+		logger.info('Initializing database...');
 		await migrate();
-		logger.info("Database initialized");
+		logger.info('Database initialized');
 
 		app.listen(PORT, () => {
 			logger.info(`Server running on port ${PORT}`);
-			logger.info(
-				`Swagger docs available at http://localhost:${PORT}/api-docs`
-			);
+			logger.info(`Swagger docs available at http://localhost:${PORT}/api-docs`);
 		});
 	} catch (error) {
-		console.error("Initialization failed:", error);
+		console.error('Initialization failed:', error);
 		process.exit(1);
 	}
 }

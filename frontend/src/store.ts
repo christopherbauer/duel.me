@@ -1,4 +1,11 @@
-import { create } from "zustand";
+import { create } from 'zustand';
+
+export interface Indicator {
+	id: string;
+	seat: number;
+	position: Position;
+	color: string;
+}
 
 export interface GameState {
 	game_session_id: string;
@@ -9,6 +16,7 @@ export interface GameState {
 	active_seat: 1 | 2;
 	turn_number: number;
 	objects: GameStateObjects[];
+	indicators?: Indicator[];
 }
 
 export interface GameStateObjects {
@@ -47,16 +55,16 @@ export interface ImageUris {
 }
 
 export enum Color {
-	B = "B",
-	G = "G",
-	R = "R",
-	U = "U",
-	W = "W",
+	B = 'B',
+	G = 'G',
+	R = 'R',
+	U = 'U',
+	W = 'W',
 }
 
 export enum Layout {
-	Class = "class",
-	Normal = "normal",
+	Class = 'class',
+	Normal = 'normal',
 }
 
 export interface Counters {
@@ -72,20 +80,24 @@ export interface Position {
 }
 
 export enum Zone {
-	Battlefield = "battlefield",
-	CommandZone = "command_zone",
-	Library = "library",
-	Exile = "exile",
+	Battlefield = 'battlefield',
+	CommandZone = 'command_zone',
+	Library = 'library',
+	Exile = 'exile',
 }
 
 export interface GameStore {
 	currentGameId: string | null;
 	viewerSeat: 1 | 2;
 	gameState: GameState | null;
+	availableTokens: Card[];
+	availableComponents: Card[];
 
 	setCurrentGame: (gameId: string) => void;
 	setViewerSeat: (seat: 1 | 2) => void;
 	setGameState: (state: GameState) => void;
+	setAvailableTokens: (tokens: Card[]) => void;
+	setAvailableComponents: (components: Card[]) => void;
 	clearGame: () => void;
 }
 
@@ -93,10 +105,20 @@ export const useGameStore = create<GameStore>((set) => ({
 	currentGameId: null,
 	viewerSeat: 1,
 	gameState: null,
+	availableTokens: [],
+	availableComponents: [],
 
 	setCurrentGame: (gameId: string) => set({ currentGameId: gameId }),
 	setViewerSeat: (seat: 1 | 2) => set({ viewerSeat: seat }),
 	setGameState: (state: GameState) => set({ gameState: state }),
+	setAvailableTokens: (tokens: Card[]) => set({ availableTokens: tokens }),
+	setAvailableComponents: (components: Card[]) => set({ availableComponents: components }),
 	clearGame: () =>
-		set({ currentGameId: null, gameState: null, viewerSeat: 1 }),
+		set({
+			currentGameId: null,
+			gameState: null,
+			viewerSeat: 1,
+			availableTokens: [],
+			availableComponents: [],
+		}),
 }));

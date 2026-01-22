@@ -7,7 +7,7 @@ export const obfuscatePassword = (jsonObject: Record<string, any>) => {
 				var curPropValue = objectLevel[key];
 				if (key.match(/(password)+/gi)) {
 					//Matches key password, case insensitive, and redacts the data
-					objectLevel[key] = "[REDACTED BY LOGGING FRAMEWORK]";
+					objectLevel[key] = '[REDACTED BY LOGGING FRAMEWORK]';
 				}
 				if (curPropValue.constructor === jsonConstructor) {
 					checkProps(curPropValue);

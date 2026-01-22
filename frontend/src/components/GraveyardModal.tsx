@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-interface ExileModalProps {
+interface GraveyardModalProps {
 	cards: any[];
 	onMoveCard: (cardId: string, zone: 'hand' | 'library' | 'graveyard' | 'exile') => void;
 	onClose: () => void;
@@ -11,7 +11,7 @@ interface ContextMenu {
 	y: number;
 	cardId: string;
 }
-export const ExileModal: React.FC<ExileModalProps> = ({ cards, onMoveCard, onClose }) => {
+export const GraveyardModal: React.FC<GraveyardModalProps> = ({ cards, onMoveCard, onClose }) => {
 	const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
 
 	const handleCardContextMenu = (e: React.MouseEvent, cardId: string) => {
@@ -37,7 +37,7 @@ export const ExileModal: React.FC<ExileModalProps> = ({ cards, onMoveCard, onClo
 		<div style={styles.overlay} onClick={onClose}>
 			<div style={styles.modal} onClick={(e) => e.stopPropagation()}>
 				<div style={styles.header}>
-					<h2 style={styles.title}>Exile Zone ({cards.length} cards)</h2>
+					<h2 style={styles.title}>Graveyard ({cards.length} cards)</h2>
 					<button onClick={onClose} style={styles.closeButton}>
 						✕
 					</button>
@@ -80,15 +80,7 @@ export const ExileModal: React.FC<ExileModalProps> = ({ cards, onMoveCard, onClo
 							onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#444')}
 							onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
 						>
-							Keep in Library
-						</div>
-						<div
-							style={styles.contextMenuItem}
-							onClick={() => handleMoveCard('graveyard')}
-							onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#444')}
-							onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-						>
-							Move to Graveyard
+							Move to Library
 						</div>
 						<div
 							style={styles.contextMenuItem}

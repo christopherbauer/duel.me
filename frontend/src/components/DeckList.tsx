@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { api } from "../api";
-import { DeckLoader } from "./DeckLoader";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { api } from '../api';
+import { DeckLoader } from './DeckLoader';
+import { Link } from 'react-router-dom';
 
 interface Deck {
 	id: string;
@@ -13,13 +13,13 @@ interface Deck {
 	commander_image?: string;
 }
 
-type View = "list" | "create" | "edit";
+type View = 'list' | 'create' | 'edit';
 
 export const DeckList: React.FC = () => {
-	const [view, setView] = useState<View>("list");
+	const [view, setView] = useState<View>('list');
 	const [decks, setDecks] = useState<Deck[]>([]);
 	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState("");
+	const [error, setError] = useState('');
 	const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
 
 	const loadDecks = async () => {
@@ -36,18 +36,15 @@ export const DeckList: React.FC = () => {
 						const commanderImage = getCommanderImage(fullDeck.data);
 						return { ...deck, commander_image: commanderImage };
 					} catch (err) {
-						console.error(
-							`Failed to fetch details for deck ${deck.id}`,
-							err,
-						);
+						console.error(`Failed to fetch details for deck ${deck.id}`, err);
 						return deck;
 					}
-				}),
+				})
 			);
 
 			setDecks(decksWithImages);
 		} catch (err) {
-			setError("Failed to load decks");
+			setError('Failed to load decks');
 			console.error(err);
 		} finally {
 			setLoading(false);
@@ -68,43 +65,36 @@ export const DeckList: React.FC = () => {
 			await api.deleteDeck(id);
 			setDecks(decks.filter((d) => d.id !== id));
 		} catch (err) {
-			setError("Failed to delete deck");
+			setError('Failed to delete deck');
 			console.error(err);
 		}
 	};
 
 	const handleDeckCreated = (deckId: string) => {
-		setView("list");
+		setView('list');
 		loadDecks();
 	};
 
 	const handleDeckUpdated = (deckId: string) => {
-		setView("list");
+		setView('list');
 		loadDecks();
 	};
 
 	// Helper to get commander image from deck (if present)
 	function getCommanderImage(deck: any): string | undefined {
 		if (deck.commander_ids && deck.cards) {
-			const commander = deck.cards.find((c: any) =>
-				deck.commander_ids.includes(c.id),
-			);
+			const commander = deck.cards.find((c: any) => deck.commander_ids.includes(c.id));
 			if (commander && commander.image_uris) {
-				return (
-					commander.image_uris.art_crop || commander.image_uris.normal
-				);
+				return commander.image_uris.art_crop || commander.image_uris.normal;
 			}
 		}
 		return undefined;
 	}
 
-	if (view === "create") {
+	if (view === 'create') {
 		return (
 			<div>
-				<button
-					onClick={() => setView("list")}
-					style={styles.backButton}
-				>
+				<button onClick={() => setView('list')} style={styles.backButton}>
 					← Back to Decks
 				</button>
 				<DeckLoader onDeckCreated={handleDeckCreated} />
@@ -112,22 +102,19 @@ export const DeckList: React.FC = () => {
 		);
 	}
 
-	if (view === "edit" && editingDeckId) {
+	if (view === 'edit' && editingDeckId) {
 		return (
 			<div>
 				<button
 					onClick={() => {
-						setView("list");
+						setView('list');
 						setEditingDeckId(null);
 					}}
 					style={styles.backButton}
 				>
 					← Back to Decks
 				</button>
-				<DeckLoader
-					deckId={editingDeckId}
-					onDeckUpdated={handleDeckUpdated}
-				/>
+				<DeckLoader deckId={editingDeckId} onDeckUpdated={handleDeckUpdated} />
 			</div>
 		);
 	}
@@ -136,10 +123,7 @@ export const DeckList: React.FC = () => {
 		<div style={styles.container}>
 			<div style={styles.header}>
 				<h2>My Decks</h2>
-				<button
-					onClick={() => setView("create")}
-					style={styles.createButton}
-				>
+				<button onClick={() => setView('create')} style={styles.createButton}>
 					+ Create New Deck
 				</button>
 			</div>
@@ -155,60 +139,39 @@ export const DeckList: React.FC = () => {
 			) : (
 				<div style={styles.deckGrid}>
 					{decks.map((deck) => (
-						<Link
-							to={`/decks/${deck.id}`}
-							key={deck.id}
-							style={{ textDecoration: "none" }}
-						>
+						<Link to={`/decks/${deck.id}`} key={deck.id} style={{ textDecoration: 'none' }}>
 							<div
 								style={{
 									...styles.deckCard,
-									backgroundImage: deck.commander_image
-										? `url(${deck.commander_image})`
-										: undefined,
-									backgroundSize: "cover",
-									backgroundPosition: "center",
-									backgroundRepeat: "no-repeat",
-									position: "relative",
-									overflow: "hidden",
+									backgroundImage: deck.commander_image ? `url(${deck.commander_image})` : undefined,
+									backgroundSize: 'cover',
+									backgroundPosition: 'center',
+									backgroundRepeat: 'no-repeat',
+									position: 'relative',
+									overflow: 'hidden',
 								}}
 							>
 								<div
 									style={{
-										position: "absolute",
+										position: 'absolute',
 										top: 0,
 										left: 0,
-										width: "100%",
-										height: "100%",
-										background: deck.commander_image
-											? "rgba(30,30,30,0.75)"
-											: undefined,
+										width: '100%',
+										height: '100%',
+										background: deck.commander_image ? 'rgba(30,30,30,0.75)' : undefined,
 										zIndex: 1,
 									}}
 								/>
-								<div
-									style={{ position: "relative", zIndex: 2 }}
-								>
-									<div style={styles.deckName}>
-										{deck.name}
-									</div>
-									{deck.description && (
-										<div style={styles.deckDescription}>
-											{deck.description}
-										</div>
-									)}
-									<div style={styles.deckDate}>
-										Updated{" "}
-										{new Date(
-											deck.updated_at,
-										).toLocaleDateString()}
-									</div>
+								<div style={{ position: 'relative', zIndex: 2 }}>
+									<div style={styles.deckName}>{deck.name}</div>
+									{deck.description && <div style={styles.deckDescription}>{deck.description}</div>}
+									<div style={styles.deckDate}>Updated {new Date(deck.updated_at).toLocaleDateString()}</div>
 									<div style={styles.deckActions}>
 										<span
 											style={{
 												...styles.editButton,
 												opacity: 0.7,
-												pointerEvents: "none",
+												pointerEvents: 'none',
 											}}
 										>
 											Edit
@@ -217,10 +180,7 @@ export const DeckList: React.FC = () => {
 											onClick={(e) => {
 												e.preventDefault();
 												e.stopPropagation();
-												handleDeleteDeck(
-													deck.id,
-													deck.name,
-												);
+												handleDeleteDeck(deck.id, deck.name);
 											}}
 											style={styles.deleteButton}
 										>
@@ -239,105 +199,105 @@ export const DeckList: React.FC = () => {
 
 const styles = {
 	container: {
-		padding: "20px",
-		maxWidth: "1000px",
+		padding: '20px',
+		maxWidth: '1000px',
 	},
 	header: {
-		display: "flex",
-		justifyContent: "space-between",
-		alignItems: "center",
-		marginBottom: "20px",
+		display: 'flex',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		marginBottom: '20px',
 	},
 	createButton: {
-		padding: "10px 20px",
-		backgroundColor: "#00aa00",
-		color: "#fff",
-		border: "none",
-		borderRadius: "4px",
-		cursor: "pointer",
-		fontSize: "14px",
-		fontWeight: "bold",
+		padding: '10px 20px',
+		backgroundColor: '#00aa00',
+		color: '#fff',
+		border: 'none',
+		borderRadius: '4px',
+		cursor: 'pointer',
+		fontSize: '14px',
+		fontWeight: 'bold',
 	},
 	backButton: {
-		padding: "8px 16px",
-		backgroundColor: "#444",
-		color: "#fff",
-		border: "none",
-		borderRadius: "4px",
-		cursor: "pointer",
-		fontSize: "14px",
-		marginBottom: "20px",
+		padding: '8px 16px',
+		backgroundColor: '#444',
+		color: '#fff',
+		border: 'none',
+		borderRadius: '4px',
+		cursor: 'pointer',
+		fontSize: '14px',
+		marginBottom: '20px',
 	},
 	deckGrid: {
-		display: "grid",
-		gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-		gap: "15px",
+		display: 'grid',
+		gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+		gap: '15px',
 	},
 	deckCard: {
-		backgroundColor: "#2a2a2a",
-		padding: "15px",
-		borderRadius: "8px",
-		border: "1px solid #444",
+		backgroundColor: '#2a2a2a',
+		padding: '15px',
+		borderRadius: '8px',
+		border: '1px solid #444',
 	},
 	deckName: {
-		fontSize: "16px",
-		fontWeight: "bold",
-		marginBottom: "8px",
-		color: "#fff",
+		fontSize: '16px',
+		fontWeight: 'bold',
+		marginBottom: '8px',
+		color: '#fff',
 	},
 	deckDescription: {
-		fontSize: "12px",
-		color: "#999",
-		marginBottom: "8px",
+		fontSize: '12px',
+		color: '#999',
+		marginBottom: '8px',
 	},
 	deckDate: {
-		fontSize: "11px",
-		color: "#666",
-		marginBottom: "12px",
+		fontSize: '11px',
+		color: '#666',
+		marginBottom: '12px',
 	},
 	deckActions: {
-		display: "flex",
-		gap: "8px",
+		display: 'flex',
+		gap: '8px',
 	},
 	editButton: {
 		flex: 1,
-		padding: "8px 12px",
-		backgroundColor: "#0066ff",
-		color: "#fff",
-		border: "none",
-		borderRadius: "4px",
-		cursor: "pointer",
-		fontSize: "12px",
-		fontWeight: "bold",
+		padding: '8px 12px',
+		backgroundColor: '#0066ff',
+		color: '#fff',
+		border: 'none',
+		borderRadius: '4px',
+		cursor: 'pointer',
+		fontSize: '12px',
+		fontWeight: 'bold',
 	},
 	deleteButton: {
 		flex: 1,
-		padding: "8px 12px",
-		backgroundColor: "#ff4444",
-		color: "#fff",
-		border: "none",
-		borderRadius: "4px",
-		cursor: "pointer",
-		fontSize: "12px",
-		fontWeight: "bold",
+		padding: '8px 12px',
+		backgroundColor: '#ff4444',
+		color: '#fff',
+		border: 'none',
+		borderRadius: '4px',
+		cursor: 'pointer',
+		fontSize: '12px',
+		fontWeight: 'bold',
 	},
 	error: {
-		color: "#ff4444",
-		padding: "10px",
-		backgroundColor: "#330000",
-		borderRadius: "4px",
-		marginBottom: "15px",
+		color: '#ff4444',
+		padding: '10px',
+		backgroundColor: '#330000',
+		borderRadius: '4px',
+		marginBottom: '15px',
 	},
 	loading: {
-		color: "#999",
-		padding: "20px",
-		textAlign: "center",
+		color: '#999',
+		padding: '20px',
+		textAlign: 'center',
 	},
 	empty: {
-		color: "#999",
-		padding: "40px 20px",
-		textAlign: "center",
-		backgroundColor: "#2a2a2a",
-		borderRadius: "8px",
+		color: '#999',
+		padding: '40px 20px',
+		textAlign: 'center',
+		backgroundColor: '#2a2a2a',
+		borderRadius: '8px',
 	},
 } as Record<string, React.CSSProperties>;
