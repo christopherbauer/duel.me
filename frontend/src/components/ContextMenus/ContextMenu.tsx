@@ -51,11 +51,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	executeAction,
 }) => {
 	const [hoveredSubmenu, setHoveredSubmenu] = useState<string | null>(null);
-	const [hoveredSubitem, setHoveredSubitem] = useState<string | null>(null);
 	const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-	const [submenuSearches, setSubmenuSearches] = useState<
-		Record<string, string>
-	>({});
 	const submenuTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
 	useEffect(() => {
@@ -214,215 +210,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 						</div>
 
 						{item.submenu && hoveredSubmenu === item.label && (
-							<div
-								style={styles.submenu}
-								onMouseLeave={() => {
-									submenuTimeoutRef.current = setTimeout(
-										() => {
-											setHoveredSubitem(null);
-											setHoveredSubmenu(null);
-										},
-										150,
-									);
-								}}
-								onMouseEnter={() => {
-									if (submenuTimeoutRef.current) {
-										clearTimeout(submenuTimeoutRef.current);
-										submenuTimeoutRef.current = null;
-									}
-								}}
-							>
-								<input
-									type="text"
-									placeholder="Search..."
-									value={submenuSearches[item.label] || ""}
-									onChange={(e) => {
-										setSubmenuSearches({
-											...submenuSearches,
-											[item.label]: e.target.value,
-										});
-									}}
-									onClick={(e) => e.stopPropagation()}
-									style={{
-										width: "100%",
-										padding: "6px 8px",
-										borderBottom: "1px solid #555",
-										backgroundColor: "#1a1a1a",
-										color: "#fff",
-										border: "none",
-										fontSize: "12px",
-										boxSizing: "border-box",
-									}}
-								/>
-								{item.submenu
-									.filter((subitem) =>
-										subitem.label
-											.toLowerCase()
-											.includes(
-												(
-													submenuSearches[
-														item.label
-													] || ""
-												).toLowerCase(),
-											),
-									)
-									.map((subitem) => (
-										<div
-											key={subitem.label}
-											style={{
-												position: "relative" as const,
-											}}
-											onMouseEnter={() => {
-												if (submenuTimeoutRef.current) {
-													clearTimeout(
-														submenuTimeoutRef.current,
-													);
-													submenuTimeoutRef.current =
-														null;
-												}
-												if (subitem.submenu) {
-													setHoveredSubitem(
-														subitem.label,
-													);
-												}
-											}}
-											onMouseLeave={() => {
-												submenuTimeoutRef.current =
-													setTimeout(() => {
-														setHoveredSubitem(null);
-													}, 150);
-											}}
-										>
-											<div
-												style={{
-													...styles.contextMenuItem,
-													borderBottom:
-														subitem ===
-														item.submenu![
-															item.submenu!
-																.length - 1
-														]
-															? "none"
-															: "1px solid #444",
-													paddingRight:
-														subitem.submenu
-															? "20px"
-															: "12px",
-												}}
-												onClick={() => {
-													handleMenuItemClick(
-														subitem,
-													);
-												}}
-												onMouseEnter={(e) => {
-													(
-														e.currentTarget as HTMLElement
-													).style.backgroundColor =
-														"#444";
-												}}
-												onMouseLeave={(e) => {
-													(
-														e.currentTarget as HTMLElement
-													).style.backgroundColor =
-														"transparent";
-												}}
-											>
-												{subitem.label}
-												{subitem.submenu && (
-													<span
-														style={
-															styles.submenuArrow
-														}
-													>
-														›
-													</span>
-												)}
-											</div>
-											{/* Third-level submenu */}
-											{subitem.submenu &&
-												hoveredSubitem ===
-													subitem.label && (
-													<div
-														style={styles.submenu}
-														onMouseEnter={() => {
-															if (
-																submenuTimeoutRef.current
-															) {
-																clearTimeout(
-																	submenuTimeoutRef.current,
-																);
-																submenuTimeoutRef.current =
-																	null;
-															}
-															setHoveredSubitem(
-																subitem.label,
-															);
-														}}
-														onMouseLeave={() => {
-															submenuTimeoutRef.current =
-																setTimeout(
-																	() => {
-																		setHoveredSubitem(
-																			null,
-																		);
-																	},
-																	150,
-																);
-														}}
-													>
-														{subitem.submenu.map(
-															(subsubitem) => (
-																<div
-																	key={
-																		subsubitem.label
-																	}
-																	style={{
-																		...styles.contextMenuItem,
-																		borderBottom:
-																			subsubitem ===
-																			subitem
-																				.submenu![
-																				subitem
-																					.submenu!
-																					.length -
-																					1
-																			]
-																				? "none"
-																				: "1px solid #444",
-																	}}
-																	onClick={() => {
-																		handleMenuItemClick(
-																			subsubitem,
-																		);
-																	}}
-																	onMouseEnter={(
-																		e,
-																	) => {
-																		(
-																			e.currentTarget as HTMLElement
-																		).style.backgroundColor =
-																			"#444";
-																	}}
-																	onMouseLeave={(
-																		e,
-																	) => {
-																		(
-																			e.currentTarget as HTMLElement
-																		).style.backgroundColor =
-																			"transparent";
-																	}}
-																>
-																	{
-																		subsubitem.label
-																	}
-																</div>
-															),
-														)}
-													</div>
-												)}
-										</div>
-									))}
-							</div>
+							<Submenu
+								item={
+									item as RequiredProperties<
+										MenuItem,
+										"submenu"
+									>
+								}
+								type={type}
+								onMenuItemClick={handleMenuItemClick}
+							/>
 						)}
 					</div>
 				);
@@ -430,7 +227,136 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 		</div>
 	);
 };
+type RequiredProperties<T, K extends keyof T> = Omit<T, K> &
+	Required<Pick<T, K>>;
+type SubmenuProps = Omit<
+	ContextMenuProps,
+	"onClose" | "executeAction" | "x" | "y"
+> & {
+	item: MenuItem;
+	onMenuItemClick: (item: MenuItem) => void;
+};
+const Submenu = ({ item, type, onMenuItemClick }: SubmenuProps) => {
+	const [submenuSearches, setSubmenuSearches] = useState<
+		Record<string, string>
+	>({});
+	const submenuTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+	const [hoveredSubitem, setHoveredSubitem] = useState<MenuItem | null>(null);
 
+	return (
+		<div
+			style={{ ...styles.submenu }}
+			onMouseLeave={() => {
+				submenuTimeoutRef.current = setTimeout(() => {
+					setHoveredSubitem(null);
+				}, 150);
+			}}
+			onMouseEnter={() => {
+				if (submenuTimeoutRef.current) {
+					clearTimeout(submenuTimeoutRef.current);
+					submenuTimeoutRef.current = null;
+				}
+			}}
+		>
+			<input
+				type="text"
+				placeholder="Search..."
+				value={submenuSearches[item.label] || ""}
+				onChange={(e) => {
+					setSubmenuSearches({
+						...submenuSearches,
+						[item.label]: e.target.value,
+					});
+				}}
+				onClick={(e) => e.stopPropagation()}
+				style={{
+					width: "100%",
+					padding: "6px 8px",
+					borderBottom: "1px solid #555",
+					backgroundColor: "#1a1a1a",
+					color: "#fff",
+					border: "none",
+					fontSize: "12px",
+					boxSizing: "border-box",
+				}}
+			/>
+			<div style={styles.subMenuScrollContainer}>
+				{item.submenu
+					?.filter((subitem) =>
+						subitem.label
+							.toLowerCase()
+							.includes(
+								(
+									submenuSearches[item.label] || ""
+								).toLowerCase(),
+							),
+					)
+					.map((subitem) => (
+						<div
+							key={subitem.label}
+							style={{
+								position: "relative" as const,
+							}}
+							onMouseEnter={() => {
+								if (submenuTimeoutRef.current) {
+									clearTimeout(submenuTimeoutRef.current);
+									submenuTimeoutRef.current = null;
+								}
+								if (subitem.submenu) {
+									setHoveredSubitem(subitem);
+								}
+							}}
+							onMouseLeave={() => {
+								submenuTimeoutRef.current = setTimeout(() => {
+									setHoveredSubitem(null);
+								}, 150);
+							}}
+						>
+							<div
+								style={{
+									...styles.contextMenuItem,
+									borderBottom:
+										subitem ===
+										item.submenu![item.submenu!.length - 1]
+											? "none"
+											: "1px solid #444",
+									paddingRight: subitem.submenu
+										? "20px"
+										: "12px",
+								}}
+								onClick={() => {
+									onMenuItemClick(subitem);
+								}}
+								onMouseEnter={(e) => {
+									(
+										e.currentTarget as HTMLElement
+									).style.backgroundColor = "#444";
+								}}
+								onMouseLeave={(e) => {
+									(
+										e.currentTarget as HTMLElement
+									).style.backgroundColor = "transparent";
+								}}
+							>
+								{subitem.label}
+								{subitem.submenu && (
+									<span style={styles.submenuArrow}>›</span>
+								)}
+							</div>
+							{/* Third-level submenu */}
+						</div>
+					))}
+			</div>
+			{hoveredSubitem && hoveredSubitem.submenu && (
+				<Submenu
+					item={hoveredSubitem}
+					type={type}
+					onMenuItemClick={onMenuItemClick}
+				/>
+			)}
+		</div>
+	);
+};
 const styles = {
 	contextMenu: {
 		position: "fixed" as const,
@@ -472,6 +398,10 @@ const styles = {
 		fontSize: "14px",
 		color: "#888",
 		marginLeft: "8px",
+	},
+	subMenuScrollContainer: {
+		maxHeight: "600px",
+		overflowY: "scroll" as const,
 	},
 	sectionHeader: {
 		padding: "6px 12px",
