@@ -28,5 +28,9 @@ export const api = {
 		}),
 	getGameTokens: (gameId: string) => client.get(`/games/${gameId}/tokens`),
 	getGameComponents: (gameId: string) => client.get(`/games/${gameId}/components`),
+	getGameActions: (gameId: string, page: number = 1, limit: number = 50) =>
+		client.get(`/games/${gameId}/actions`, {
+			params: { page, limit },
+		}),
 	executeAction: (gameId: string, payload: any) => client.post(`/games/${gameId}/action`, payload),
 };

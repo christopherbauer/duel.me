@@ -9,6 +9,7 @@ import { ExileModal } from './ExileModal';
 import { GraveyardModal } from './GraveyardModal';
 import { LibrarySearchModal } from './LibrarySearchModal';
 import { BattlefieldIndicators } from './BattlefieldIndicators';
+import { GameAuditLog } from './GameAuditLog';
 import { ActionMethod } from '../types';
 
 export const GameBoard: React.FC = () => {
@@ -50,6 +51,7 @@ export const GameBoard: React.FC = () => {
 	const [exileModal, setExileModal] = useState<any[] | null>(null);
 	const [graveyardModal, setGraveyardModal] = useState<any[] | null>(null);
 	const [librarySearchModal, setLibrarySearchModal] = useState<any[] | null>(null);
+	const [showAuditLog, setShowAuditLog] = useState(false);
 	const battlefieldRef = useRef<HTMLDivElement>(null);
 	const flippedSeatsRef = useRef<Set<number>>(new Set());
 
@@ -651,6 +653,9 @@ export const GameBoard: React.FC = () => {
 				<div style={styles.undoRedoButtons}>
 					<button style={styles.footerButton}>↶ Undo</button>
 					<button style={styles.footerButton}>↷ Redo</button>
+					<button style={styles.footerButton} onClick={() => setShowAuditLog(true)}>
+						📋 Log
+					</button>
 				</div>
 				<button style={styles.endTurnButton} onClick={() => executeAction('end_turn')}>
 					End Turn
@@ -712,6 +717,8 @@ export const GameBoard: React.FC = () => {
 					}}
 				/>
 			)}
+
+			{gameId && <GameAuditLog gameId={gameId} isOpen={showAuditLog} onClose={() => setShowAuditLog(false)} />}
 
 			<div style={styles.turnInfo}>
 				Turn {gameState.turn_number} • Active: Seat {gameState.active_seat}

@@ -1,7 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../core/pool';
 import { v4 as uuidv4 } from 'uuid';
-import { GameSession, GameState, GameStateView, DeckCards, CommanderIds, GameStateQueryResult, Card, Indicator, GameAuditLogResponse } from '../types/game';
+import {
+	GameSession,
+	GameState,
+	GameStateView,
+	DeckCards,
+	CommanderIds,
+	GameStateQueryResult,
+	Card,
+	Indicator,
+	GameAuditLogResponse,
+} from '../types/game';
 import logger from '../core/logger';
 import { handleGameAction } from './gameActions';
 import GamesStore from '../db/GamesStore';
@@ -415,11 +425,8 @@ router.get('/:id/actions', async (req, res) => {
 
 	try {
 		// Get total count
-		const countResult = await query<{ count: number }>(
-			`SELECT COUNT(*) as count FROM game_actions WHERE game_session_id = $1`,
-			[id]
-		);
-		const total = parseInt(countResult?.rows[0]?.count || '0');
+		const countResult = await query<{ count: number }>(`SELECT COUNT(*) as count FROM game_actions WHERE game_session_id = $1`, [id]);
+		const total = countResult?.rowCount;
 
 		// Get actions with pagination, ordered by creation time
 		const actionsResult = await query<any>(
@@ -431,13 +438,14 @@ router.get('/:id/actions', async (req, res) => {
 			[id, limit, offset]
 		);
 
-		const actions = actionsResult?.rows.map((row) => ({
-			id: row.id,
-			seat: row.seat,
-			action_type: row.action_type,
-			metadata: row.metadata,
-			created_at: row.created_at,
-		})) || [];
+		const actions =
+			actionsResult?.rows.map((row) => ({
+				id: row.id,
+				seat: row.seat,
+				action_type: row.action_type,
+				metadata: row.metadata,
+				created_at: row.created_at,
+			})) || [];
 
 		res.json({
 			total,
