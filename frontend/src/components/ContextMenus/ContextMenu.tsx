@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useGameStore, Card } from "../../store";
 import { ActionMethod } from "../../types";
 import { ContextMenuType, MenuItem } from "./types";
@@ -9,6 +9,27 @@ import {
 	battlefieldMenuItems,
 	graveyardMenuItems,
 } from "./MenuItems";
+
+// Custom hook for managing submenu timeout behavior
+const useSubmenuTimeout = () => {
+	const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+	const set = useCallback((callback: () => void, delay: number = 150) => {
+		if (timeoutRef.current) {
+			clearTimeout(timeoutRef.current);
+		}
+		timeoutRef.current = setTimeout(callback, delay);
+	}, []);
+
+	const clear = useCallback(() => {
+		if (timeoutRef.current) {
+			clearTimeout(timeoutRef.current);
+			timeoutRef.current = null;
+		}
+	}, []);
+
+	return { set, clear };
+};
 
 const typeToMenuItemsMap: (
 	objectId?: string,
@@ -52,18 +73,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 }) => {
 	const [hoveredSubmenu, setHoveredSubmenu] = useState<string | null>(null);
 	const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-	const submenuTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+	const { set: setMenuTimeout, clear: clearMenuTimeout } =
+		useSubmenuTimeout();
 
 	useEffect(() => {
 		const handleClickOutside = () => onClose();
 		window.addEventListener("click", handleClickOutside);
 		return () => {
 			window.removeEventListener("click", handleClickOutside);
-			if (submenuTimeoutRef.current) {
-				clearTimeout(submenuTimeoutRef.current);
-			}
+			clearMenuTimeout();
 		};
-	}, [onClose]);
+	}, [onClose, clearMenuTimeout]);
 
 	const { availableTokens, availableComponents } = useGameStore();
 
@@ -84,10 +104,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	};
 
 	const handleMouseEnter = (label: string, hasSubmenu: boolean) => {
-		if (submenuTimeoutRef.current) {
-			clearTimeout(submenuTimeoutRef.current);
-			submenuTimeoutRef.current = null;
-		}
+		clearMenuTimeout();
 		setHoveredItem(label);
 		if (hasSubmenu) {
 			setHoveredSubmenu(label);
@@ -95,7 +112,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	};
 
 	const handleMouseLeave = () => {
-		submenuTimeoutRef.current = setTimeout(() => {
+		setMenuTimeout(() => {
 			setHoveredSubmenu(null);
 			setHoveredItem(null);
 		}, 500);
@@ -110,10 +127,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 			}}
 			onMouseLeave={handleMouseLeave}
 			onMouseEnter={() => {
-				if (submenuTimeoutRef.current) {
-					clearTimeout(submenuTimeoutRef.current);
-					submenuTimeoutRef.current = null;
-				}
+				clearMenuTimeout();
 			}}
 		>
 			{menuItems.map((item, idx) => {
@@ -240,22 +254,21 @@ const Submenu = ({ item, type, onMenuItemClick }: SubmenuProps) => {
 	const [submenuSearches, setSubmenuSearches] = useState<
 		Record<string, string>
 	>({});
-	const submenuTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+	const { set: setSubmenuTimeout, clear: clearSubmenuTimeout } =
+		useSubmenuTimeout();
 	const [hoveredSubitem, setHoveredSubitem] = useState<MenuItem | null>(null);
 
 	return (
 		<div
 			style={{ ...styles.submenu }}
+			data-submenu="true"
 			onMouseLeave={() => {
-				submenuTimeoutRef.current = setTimeout(() => {
+				setSubmenuTimeout(() => {
 					setHoveredSubitem(null);
-				}, 150);
+				});
 			}}
 			onMouseEnter={() => {
-				if (submenuTimeoutRef.current) {
-					clearTimeout(submenuTimeoutRef.current);
-					submenuTimeoutRef.current = null;
-				}
+				clearSubmenuTimeout();
 			}}
 		>
 			<input
@@ -298,18 +311,26 @@ const Submenu = ({ item, type, onMenuItemClick }: SubmenuProps) => {
 								position: "relative" as const,
 							}}
 							onMouseEnter={() => {
-								if (submenuTimeoutRef.current) {
-									clearTimeout(submenuTimeoutRef.current);
-									submenuTimeoutRef.current = null;
-								}
+								clearSubmenuTimeout();
 								if (subitem.submenu) {
 									setHoveredSubitem(subitem);
 								}
 							}}
-							onMouseLeave={() => {
-								submenuTimeoutRef.current = setTimeout(() => {
+							onMouseLeave={(e) => {
+								// Don't close if moving to a child submenu
+								const relatedTarget = e.relatedTarget as HTMLElement;
+								if (
+									relatedTarget &&
+									(relatedTarget.closest("[data-submenu]") ||
+										relatedTarget.closest(
+											"[data-submenu-item]",
+										))
+								) {
+									return;
+								}
+								setSubmenuTimeout(() => {
 									setHoveredSubitem(null);
-								}, 150);
+								});
 							}}
 						>
 							<div
@@ -324,6 +345,7 @@ const Submenu = ({ item, type, onMenuItemClick }: SubmenuProps) => {
 										? "20px"
 										: "12px",
 								}}
+								data-submenu-item="true"
 								onClick={() => {
 									onMenuItemClick(subitem);
 								}}
