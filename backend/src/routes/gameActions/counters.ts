@@ -12,7 +12,7 @@ type Metadata = {
 	amount?: number;
 	objectId: string;
 };
-export const addCounter: ActionMethod = async (gameId, seat, metadata: Metadata) => {
+export const addCounter: ActionMethod = async (_gameId, seat, metadata: Metadata) => {
 	const { objectId, counterType, amount = 1 } = metadata;
 	if (!objectId || !counterType) return;
 	// Fetch current counters
@@ -23,7 +23,7 @@ export const addCounter: ActionMethod = async (gameId, seat, metadata: Metadata)
 	await query(`UPDATE game_objects SET counters = $1 WHERE id = $2`, [JSON.stringify(counters), objectId]);
 };
 
-export const removeCounter: ActionMethod = async (gameId, seat, metadata: Metadata) => {
+export const removeCounter: ActionMethod = async (_gameId, seat, metadata: Metadata) => {
 	const { objectId, counterType, amount = 1 } = metadata;
 	if (!objectId || !counterType) return;
 	// Fetch current counters

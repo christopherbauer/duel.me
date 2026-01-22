@@ -3,7 +3,7 @@ import { query } from '../../core/pool';
 import { GameObjectId } from '../../types/game';
 import { ActionMethod } from './types';
 
-export const moveToExile: ActionMethod = async (_id, seat, metadata) => {
+export const moveToExile: ActionMethod = async (gameId, seat, metadata) => {
 	const count = metadata.count || 1;
 	// Move card from any zone to exile, or delete if it's a token
 	const objectId = metadata.objectId;
@@ -19,10 +19,12 @@ export const moveToExile: ActionMethod = async (_id, seat, metadata) => {
 			await query(`UPDATE game_objects SET zone = 'exile' WHERE id = $1`, [objectId]);
 		}
 	}
-	logger.info(`Exiled ${count} cards from library by seat ${seat}`);
+	logger.info(`Exiled ${count} cards from library by seat ${seat} in game ${gameId}`);
 };
-
-export const exileTopFromLibrary = async (id: string, seat: number, metadata: { count?: number }) => {
+interface ExileTopMetadata {
+	count?: number;
+}
+export const exileTopFromLibrary: ActionMethod<ExileTopMetadata> = async (gameId, seat, metadata) => {
 	// Exile X cards from top of library
 	const count = metadata.count || 1;
 	const exileResult = await query<GameObjectId>(
@@ -30,7 +32,7 @@ export const exileTopFromLibrary = async (id: string, seat: number, metadata: { 
 				 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
 				 ORDER BY "order", id
 				 LIMIT $3`,
-		[id, seat, count]
+		[gameId, seat, count]
 	);
 	if (exileResult && exileResult.rows) {
 		for (const row of exileResult.rows) {

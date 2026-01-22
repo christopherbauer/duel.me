@@ -8,6 +8,7 @@ import { ScryModal } from './ScryModal';
 import { ExileModal } from './ExileModal';
 import { GraveyardModal } from './GraveyardModal';
 import { LibrarySearchModal } from './LibrarySearchModal';
+import { BattlefieldIndicators } from './BattlefieldIndicators';
 import { ActionMethod } from '../types';
 
 export const GameBoard: React.FC = () => {
@@ -118,6 +119,61 @@ export const GameBoard: React.FC = () => {
 					});
 				} catch (err) {
 					console.error('Counter action failed:', err);
+				}
+				return;
+			}
+
+			// Handle create_indicator - add to local state
+			if (action === 'create_indicator') {
+				const position = metadata?.position || { x: 0, y: 0 };
+				const color = metadata?.color || 'red';
+				const newIndicator = {
+					id: `indicator-${Date.now()}`,
+					seat: viewerSeat,
+					position,
+					color,
+				};
+
+				const indicators = gameState.indicators || [];
+				setGameState({ ...gameState, indicators: [...indicators, newIndicator] });
+
+				// Send to server
+				try {
+					await api.executeAction(gameId, {
+						seat: seat || viewerSeat,
+						action_type: action,
+						metadata: { position, color },
+					});
+				} catch (err) {
+					console.error('Create indicator failed:', err);
+				}
+				return;
+			}
+
+			// Handle move_indicator - update local state
+			if (action === 'move_indicator') {
+				const indicatorId = metadata?.indicatorId;
+				const position = metadata?.position;
+				if (!indicatorId || !position) return;
+
+				const indicators = (gameState.indicators || []).map((ind) => {
+					if (ind.id === indicatorId) {
+						return { ...ind, position };
+					}
+					return ind;
+				});
+
+				setGameState({ ...gameState, indicators });
+
+				// Send to server
+				try {
+					await api.executeAction(gameId, {
+						seat: seat || viewerSeat,
+						action_type: action,
+						metadata: { indicatorId, position },
+					});
+				} catch (err) {
+					console.error('Move indicator failed:', err);
 				}
 				return;
 			}
@@ -363,7 +419,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction('life_change', 2, {
+										executeAction('life_change', viewerSeat === 1 ? 2 : 1, {
 											amount: -1,
 										})
 									}
@@ -373,7 +429,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction('life_change', 2, {
+										executeAction('life_change', viewerSeat === 1 ? 2 : 1, {
 											amount: 1,
 										})
 									}
@@ -507,6 +563,9 @@ export const GameBoard: React.FC = () => {
 							))}
 					</div>
 
+					{/* Battlefield Indicators overlay */}
+					<BattlefieldIndicators indicators={gameState?.indicators} seat={viewerSeat} executeAction={executeAction} />
+
 					{/* Opponent card hover preview popup */}
 					{hoveredOpponentCard &&
 						(() => {
@@ -537,7 +596,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction('life_change', 1, {
+										executeAction('life_change', viewerSeat === 1 ? 1 : 2, {
 											amount: -1,
 										})
 									}
@@ -547,7 +606,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction('life_change', 1, {
+										executeAction('life_change', viewerSeat === 1 ? 1 : 2, {
 											amount: 1,
 										})
 									}

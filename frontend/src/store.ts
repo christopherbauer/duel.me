@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 
+export interface Indicator {
+	id: string;
+	seat: number;
+	position: Position;
+	color: string;
+}
+
 export interface GameState {
 	game_session_id: string;
 	seat1_life: number;
@@ -9,6 +16,7 @@ export interface GameState {
 	active_seat: 1 | 2;
 	turn_number: number;
 	objects: GameStateObjects[];
+	indicators?: Indicator[];
 }
 
 export interface GameStateObjects {

@@ -104,7 +104,11 @@ export interface GameAction {
 	metadata?: Record<string, any>;
 	created_at: string;
 }
-
+export interface Indicator {
+	id: string;
+	position: { x: number; y: number };
+	color: string;
+}
 // Visibility/Projection types
 export interface GameStateView {
 	game_session_id: string;
@@ -116,6 +120,7 @@ export interface GameStateView {
 	turn_number: number;
 	// Zones are projected based on viewer seat
 	objects: GameObjectView[];
+	indicators?: Indicator[];
 }
 
 export interface GameObjectView {

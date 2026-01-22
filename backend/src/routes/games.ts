@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../core/pool';
 import { v4 as uuidv4 } from 'uuid';
-import { GameSession, GameState, GameStateView, DeckCards, CommanderIds, GameStateQueryResult, Card } from '../types/game';
+import { GameSession, GameState, GameStateView, DeckCards, CommanderIds, GameStateQueryResult, Card, Indicator } from '../types/game';
 import logger from '../core/logger';
 import { handleGameAction } from './gameActions';
 import GamesStore from '../db/GamesStore';
 import GameStateStore from '../db/GameStateStore';
-import { AllPartsQueryResult } from '../db/types';
+import { AllPartsQueryResult, IndicatorQueryResult } from '../db/types';
 import CardsStore from '../db/CardsStore';
 import { NotFoundError } from '../core/errors';
 
@@ -182,6 +182,19 @@ router.get('/:id', async (req, res) => {
 			});
 		logger.debug(JSON.stringify(objectsResult));
 
+		// Get indicators
+		const indicatorsResult = await GamesStore().getIndicators(id);
+		if (!indicatorsResult) {
+			throw new Error('Failed to retrieve indicators');
+		}
+		const indicators: Indicator[] = indicatorsResult.map((row) => ({
+			id: row.id,
+			game_session_id: row.game_session_id,
+			seat: row.seat,
+			position: row.position,
+			color: row.color,
+		}));
+
 		// Project visibility: hide opponent's hand and library
 		const projectedObjects = objectsResult.map((obj) => {
 			const isOpponent = obj.seat !== viewerSeat;
@@ -231,6 +244,7 @@ router.get('/:id', async (req, res) => {
 			active_seat: gameStateResult.active_seat,
 			turn_number: gameStateResult.turn_number,
 			objects: projectedObjects,
+			indicators: indicators,
 		};
 
 		res.json(view);

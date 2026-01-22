@@ -321,8 +321,8 @@ const Submenu = ({ item, type, onMenuItemClick }: SubmenuProps) => {
 												paddingRight: subitem.submenu ? '20px' : '12px',
 											}}
 											data-submenu-item="true"
-										onClick={(e) => {
-											e.stopPropagation();
+											onClick={(e) => {
+												e.stopPropagation();
 												if (shouldAddCustom && subitem.action) {
 													setQuantityInput({
 														value: '',
@@ -344,7 +344,9 @@ const Submenu = ({ item, type, onMenuItemClick }: SubmenuProps) => {
 											{subitem.submenu && <span style={styles.submenuArrow}>›</span>}
 										</div>
 										{/* Third-level submenu */}
-										{subitem.submenu && hoveredSubitem === subitem && <Submenu item={subitem} type={type} onMenuItemClick={onMenuItemClick} />}
+										{subitem.submenu && hoveredSubitem === subitem && (
+											<Submenu item={subitem} type={type} onMenuItemClick={onMenuItemClick} />
+										)}
 									</div>
 								)}
 
@@ -361,8 +363,8 @@ const Submenu = ({ item, type, onMenuItemClick }: SubmenuProps) => {
 												borderBottom: 'none',
 											}}
 											data-submenu-item="true"
-										onClick={(e) => {
-											e.stopPropagation();
+											onClick={(e) => {
+												e.stopPropagation();
 												if (subitem.action) {
 													setQuantityInput({
 														value: '',
@@ -489,6 +491,42 @@ const backgroundTokenMenuItems = (
 	items.push({
 		label: 'Untap',
 		action: 'untap_all',
+	});
+
+	items.push({
+		label: 'Add Indicator',
+		submenu: [
+			{
+				label: 'Red',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'red' },
+			},
+			{
+				label: 'Blue',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'blue' },
+			},
+			{
+				label: 'Green',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'green' },
+			},
+			{
+				label: 'Yellow',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'yellow' },
+			},
+			{
+				label: 'White',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'white' },
+			},
+			{
+				label: 'Black',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'black' },
+			},
+		],
 	});
 
 	if (availableTokens && availableTokens.length > 0) {

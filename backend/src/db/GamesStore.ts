@@ -1,7 +1,7 @@
 import { GameState, GameStateQueryResult } from '../types/game';
 import { query } from '../core/pool';
 import { AllPart } from '../seed/types';
-import { AllPartsQueryResult } from './types';
+import { AllPartsQueryResult, IndicatorQueryResult } from './types';
 
 const GamesStore = () => {
 	const getGamesObjects = async (id: string) => {
@@ -29,9 +29,21 @@ const GamesStore = () => {
 		);
 		return allPartsResult?.rows;
 	};
+	const getIndicators = async (id: string) => {
+		const indicatorsResult = await query<IndicatorQueryResult>(
+			`SELECT id, game_session_id, seat, position, color 
+			FROM battlefield_indicators 
+			WHERE 
+				game_session_id = $1 
+			ORDER BY created_at ASC`,
+			[id]
+		);
+		return indicatorsResult?.rows || [];
+	};
 	return {
 		getGamesObjects,
 		getAllParts,
+		getIndicators,
 	};
 };
 export default GamesStore;

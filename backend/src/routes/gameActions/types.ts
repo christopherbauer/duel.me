@@ -1,5 +1,1 @@
-export type ActionMethod = (
-	id: string, // Object Id
-	seat: number,
-	metadata: any
-) => Promise<void>;
+export type ActionMethod<T = any> = (gameId: string, seat: number, metadata: T) => Promise<void>;

@@ -11,16 +11,13 @@ interface TokenResult {
 	is_token: boolean;
 }
 
-export const createTokenCopy: ActionMethod = async (
-	gameId,
-	seat,
-	metadata: {
-		sourceObjectId?: string; // For card token copies
-		tokenCardId?: string; // For battlefield token creation
-		quantity: number;
-		position?: { x: number; y: number };
-	}
-) => {
+interface CreateTokenMetadata {
+	sourceObjectId?: string; // For card token copies
+	tokenCardId?: string; // For battlefield token creation
+	quantity: number;
+	position?: { x: number; y: number };
+}
+export const createTokenCopy: ActionMethod<CreateTokenMetadata> = async (gameId, seat, metadata) => {
 	logger.info(`Creating token copy with metadata: ${JSON.stringify(metadata)}`);
 	const { sourceObjectId, tokenCardId, quantity, position } = metadata;
 
@@ -79,13 +76,10 @@ export const createTokenCopy: ActionMethod = async (
 	}
 };
 
-export const removeToken: ActionMethod = async (
-	_gameId,
-	_seat,
-	metadata: {
-		objectId: string;
-	}
-) => {
+interface RemoveTokenMetadata {
+	objectId: string;
+}
+export const removeToken: ActionMethod<RemoveTokenMetadata> = async (_gameId, _seat, metadata) => {
 	const { objectId } = metadata;
 
 	if (!objectId) {

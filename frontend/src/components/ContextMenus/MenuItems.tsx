@@ -166,3 +166,41 @@ export const battlefieldMenuItems = (objectId?: string): MenuItem[] => {
 		},
 	];
 };
+
+export const emptyBattlefieldMenuItems = (position?: { x: number; y: number }): MenuItem[] => [
+	{
+		label: 'Add Indicator',
+		submenu: [
+			{
+				label: 'Red',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'red' },
+			},
+			{
+				label: 'Blue',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'blue' },
+			},
+			{
+				label: 'Green',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'green' },
+			},
+			{
+				label: 'Yellow',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'yellow' },
+			},
+			{
+				label: 'White',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'white' },
+			},
+			{
+				label: 'Black',
+				action: 'create_indicator',
+				metadata: { position: position || { x: 0, y: 0 }, color: 'black' },
+			},
+		],
+	},
+];

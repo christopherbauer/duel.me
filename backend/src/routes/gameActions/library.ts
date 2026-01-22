@@ -3,14 +3,17 @@ import { query } from '../../core/pool';
 import { GameObjectId } from '../../types/game';
 import { ActionMethod } from './types';
 
-export const drawFromLibrary = async (id: string, seat: number, metadata: { count?: number }) => {
+interface DrawMetadata {
+	count?: number;
+}
+export const drawFromLibrary: ActionMethod<DrawMetadata> = async (gameId, seat, metadata) => {
 	const count = metadata.count || 1;
 	const drawResult = await query<GameObjectId>(
 		`SELECT id FROM game_objects 
 			WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
 			ORDER BY "order", id
 			LIMIT $3`,
-		[id, seat, count]
+		[gameId, seat, count]
 	);
 	if (drawResult && drawResult.rows) {
 		for (const row of drawResult.rows) {
@@ -19,22 +22,18 @@ export const drawFromLibrary = async (id: string, seat: number, metadata: { coun
 	}
 };
 
-export const moveToLibrary: ActionMethod = async (_id, _seat, metadata) => {
+export const moveToLibrary: ActionMethod = async (_gameId, _seat, metadata) => {
 	// Move card back to library from anywhere
 	const objectId = metadata.objectId;
 	if (objectId) {
 		await query(`UPDATE game_objects SET zone = 'library' WHERE id = $1`, [objectId]);
 	}
 };
-
-export const scry = async (
-	id: string,
-	seat: number,
-	metadata: {
-		count?: number;
-		arrangement?: { top: string[]; bottom: string[] };
-	}
-) => {
+interface ScryMetadata {
+	count?: number;
+	arrangement?: { top: string[]; bottom: string[] };
+}
+export const scry: ActionMethod<ScryMetadata> = async (gameId, seat, metadata) => {
 	// Scry: arrange top X cards, unplaced go to bottom
 	const { count, arrangement } = metadata;
 	if (arrangement && count) {
@@ -45,7 +44,7 @@ export const scry = async (
 			`SELECT id FROM game_objects
 					 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
 					 ORDER BY "order", id`,
-			[id, seat]
+			[gameId, seat]
 		);
 
 		if (allCardsResult && allCardsResult.rows) {
@@ -65,17 +64,13 @@ export const scry = async (
 			}
 		}
 	}
-	logger.info(`Scry ${count} by seat ${seat} in game ${id}`);
+	logger.info(`Scry ${count} by seat ${seat} in game ${gameId}`);
 };
-
-export const surveil = async (
-	id: string,
-	seat: number,
-	metadata: {
-		count?: number;
-		arrangement?: { top: string[]; graveyard?: string[] };
-	}
-) => {
+interface SurveilMetadata {
+	count?: number;
+	arrangement?: { top: string[]; graveyard?: string[] };
+}
+export const surveil: ActionMethod<SurveilMetadata> = async (gameId, seat, metadata) => {
 	// Surveil: arrange cards, putting some to graveyard
 	const { count, arrangement } = metadata;
 	if (arrangement) {
@@ -86,7 +81,7 @@ export const surveil = async (
 			`SELECT id FROM game_objects
 					 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
 					 ORDER BY "order", id`,
-			[id, seat]
+			[gameId, seat]
 		);
 
 		if (allCardsResult && allCardsResult.rows) {
@@ -112,7 +107,7 @@ export const surveil = async (
 			}
 		}
 	}
-	logger.info(`Surveil ${count} by seat ${seat} in game ${id}`);
+	logger.info(`Surveil ${count} by seat ${seat} in game ${gameId}`);
 };
 
 const getRandom = (low: number, high: number) => Math.floor(Math.random() * (high - low + 1)) + low;
@@ -158,13 +153,13 @@ const humanRiffleShuffle = (cardIds: string[]): string[] => {
 	return cardIds;
 };
 
-export const shuffleLibrary = async (id: string, seat: number): Promise<void> => {
+export const shuffleLibrary: ActionMethod = async (gameId, seat, _metadata) => {
 	// Shuffle library using human-like riffle shuffle algorithm
 	const libraryCardsResult = await query<{ id: string }>(
 		`SELECT id FROM game_objects 
 				 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
 				 ORDER BY "order", id`,
-		[id, seat]
+		[gameId, seat]
 	);
 
 	if (libraryCardsResult && libraryCardsResult.rows) {
@@ -185,5 +180,5 @@ export const shuffleLibrary = async (id: string, seat: number): Promise<void> =>
 			);
 		}
 	}
-	logger.info(`Library shuffled by seat ${seat} in game ${id}`);
+	logger.info(`Library shuffled by seat ${seat} in game ${gameId}`);
 };
