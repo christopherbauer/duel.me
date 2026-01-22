@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../core/pool';
 import { v4 as uuidv4 } from 'uuid';
-import { GameSession, GameState, GameStateView, DeckCards, CommanderIds, GameStateQueryResult, Card, Indicator } from '../types/game';
+import { GameSession, GameState, GameStateView, DeckCards, CommanderIds, GameStateQueryResult, Card, Indicator, GameAuditLogResponse } from '../types/game';
 import logger from '../core/logger';
 import { handleGameAction } from './gameActions';
 import GamesStore from '../db/GamesStore';
@@ -381,6 +381,74 @@ router.get('/:id/components', async (req, res) => {
 	}
 	const gameComponents = componentCards.sort((a, b) => a.name.localeCompare(b.name));
 	res.json(gameComponents);
+});
+
+/**
+ * @swagger
+ * /api/games/{id}/actions:
+ *   get:
+ *     summary: Get game audit log (action history)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *     responses:
+ *       200:
+ *         description: Game audit log with pagination
+ */
+router.get('/:id/actions', async (req, res) => {
+	const { id } = req.params;
+	const page = Math.max(1, parseInt((req.query.page as string) || '1'));
+	const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '50')));
+	const offset = (page - 1) * limit;
+
+	try {
+		// Get total count
+		const countResult = await query<{ count: number }>(
+			`SELECT COUNT(*) as count FROM game_actions WHERE game_session_id = $1`,
+			[id]
+		);
+		const total = parseInt(countResult?.rows[0]?.count || '0');
+
+		// Get actions with pagination, ordered by creation time
+		const actionsResult = await query<any>(
+			`SELECT id, seat, action_type, metadata, created_at 
+			 FROM game_actions 
+			 WHERE game_session_id = $1 
+			 ORDER BY created_at ASC 
+			 LIMIT $2 OFFSET $3`,
+			[id, limit, offset]
+		);
+
+		const actions = actionsResult?.rows.map((row) => ({
+			id: row.id,
+			seat: row.seat,
+			action_type: row.action_type,
+			metadata: row.metadata,
+			created_at: row.created_at,
+		})) || [];
+
+		res.json({
+			total,
+			actions,
+			page,
+			limit,
+		});
+	} catch (error) {
+		console.error('Audit log fetch error:', error);
+		res.status(500).json({ error: 'Failed to fetch audit log' });
+	}
 });
 
 export default router;

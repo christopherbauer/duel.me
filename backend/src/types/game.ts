@@ -104,6 +104,23 @@ export interface GameAction {
 	metadata?: Record<string, any>;
 	created_at: string;
 }
+
+export interface GameActionView {
+	id: string;
+	seat: 1 | 2;
+	action_type: string;
+	metadata?: Record<string, any>;
+	created_at: string;
+	// Human-readable summary for UI
+	summary?: string;
+}
+
+export interface GameAuditLogResponse {
+	total: number;
+	actions: GameActionView[];
+	page: number;
+	limit: number;
+}
 export interface Indicator {
 	id: string;
 	position: { x: number; y: number };
