@@ -20,9 +20,18 @@ export const GameBoard: React.FC = () => {
 		initialPos: { x: number; y: number };
 		mousePos: { x: number; y: number };
 	} | null>(null);
-	const [cardScale, setCardScale] = useState(1);
-	const [browserZoom, setBrowserZoom] = useState(100);
-	const [invertOpponent, setInvertOpponent] = useState(true);
+	const [cardScale, setCardScale] = useState(() => {
+		const saved = localStorage.getItem("cardScale");
+		return saved ? parseFloat(saved) : 1;
+	});
+	const [browserZoom, setBrowserZoom] = useState(() => {
+		const saved = localStorage.getItem("browserZoom");
+		return saved ? parseInt(saved, 10) : 100;
+	});
+	const [invertOpponent, setInvertOpponent] = useState(() => {
+		const saved = localStorage.getItem("invertOpponent");
+		return saved !== null ? JSON.parse(saved) : true;
+	});
 	const [showSettings, setShowSettings] = useState(false);
 	const [showZoneBreakdown, setShowZoneBreakdown] = useState<string | null>(
 		null,
@@ -204,6 +213,18 @@ export const GameBoard: React.FC = () => {
 		loadAvailableTokens,
 		loadAvailableComponents,
 	]);
+
+	useEffect(() => {
+		localStorage.setItem("cardScale", cardScale.toString());
+	}, [cardScale]);
+
+	useEffect(() => {
+		localStorage.setItem("browserZoom", browserZoom.toString());
+	}, [browserZoom]);
+
+	useEffect(() => {
+		localStorage.setItem("invertOpponent", JSON.stringify(invertOpponent));
+	}, [invertOpponent]);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
