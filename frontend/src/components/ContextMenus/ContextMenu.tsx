@@ -190,6 +190,11 @@ const Submenu = ({ item, type, onMenuItemClick }: SubmenuProps) => {
 	const [submenuSearches, setSubmenuSearches] = useState<Record<string, string>>({});
 	const { set: setSubmenuTimeout, clear: clearSubmenuTimeout } = useSubmenuTimeout();
 	const [hoveredSubitem, setHoveredSubitem] = useState<MenuItem | null>(null);
+	const [quantityInput, setQuantityInput] = useState<{
+		value: string;
+		action: string;
+		metadata: any;
+	} | null>(null);
 
 	return (
 		<div
@@ -229,52 +234,157 @@ const Submenu = ({ item, type, onMenuItemClick }: SubmenuProps) => {
 			<div style={styles.subMenuScrollContainer}>
 				{item.submenu
 					?.filter((subitem) => subitem.label.toLowerCase().includes((submenuSearches[item.label] || '').toLowerCase()))
-					.map((subitem) => (
-						<div
-							key={subitem.label}
-							style={{
-								position: 'relative' as const,
-							}}
-							onMouseEnter={() => {
-								clearSubmenuTimeout();
-								if (subitem.submenu) {
-									setHoveredSubitem(subitem);
-								}
-							}}
-							onMouseLeave={(e) => {
-								// Don't close if moving to a child submenu
-								const relatedTarget = e.relatedTarget as HTMLElement;
-								if (relatedTarget && (relatedTarget.closest('[data-submenu]') || relatedTarget.closest('[data-submenu-item]'))) {
-									return;
-								}
-								setSubmenuTimeout(() => {
-									setHoveredSubitem(null);
-								});
-							}}
-						>
-							<div
-								style={{
-									...styles.contextMenuItem,
-									borderBottom: subitem === item.submenu![item.submenu!.length - 1] ? 'none' : '1px solid #444',
-									paddingRight: subitem.submenu ? '20px' : '12px',
-								}}
-								data-submenu-item="true"
-								onClick={() => {
-									onMenuItemClick(subitem);
-								}}
-								onMouseEnter={(e) => {
-									(e.currentTarget as HTMLElement).style.backgroundColor = '#444';
-								}}
-								onMouseLeave={(e) => {
-									(e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-								}}
-							>
-								{subitem.label}
-								{subitem.submenu && <span style={styles.submenuArrow}>›</span>}
+					.map((subitem, idx, arr) => {
+						// Check if this is a quantity-based submenu (items labeled 1, 2, 3, 4)
+						const isQuantityMenu = ['1', '2', '3', '4'].includes(subitem.label);
+						const isLastQuantityItem = isQuantityMenu && idx === arr.length - 1;
+						const shouldAddCustom = isLastQuantityItem && subitem.action === 'create_token_copy';
+
+						return (
+							<div key={subitem.label}>
+								{/* Regular submenu item or quantity input */}
+								{quantityInput && quantityInput.action === subitem.action && quantityInput.metadata === subitem.metadata ? (
+									<div
+										style={{
+											...styles.contextMenuItem,
+											display: 'flex',
+											alignItems: 'center',
+											gap: '8px',
+										}}
+										onClick={(e) => e.stopPropagation()}
+									>
+										<span>+</span>
+										<input
+											type="number"
+											min="1"
+											value={quantityInput.value}
+											onChange={(e) => {
+												setQuantityInput({
+													...quantityInput,
+													value: e.target.value,
+												});
+											}}
+											onKeyDown={(e) => {
+												if (e.key === 'Enter') {
+													const qty = parseInt(quantityInput.value) || 1;
+													if (qty > 0) {
+														onMenuItemClick({
+															...subitem,
+															metadata: {
+																...quantityInput.metadata,
+																quantity: qty,
+															},
+														});
+														setQuantityInput(null);
+													}
+												} else if (e.key === 'Escape') {
+													setQuantityInput(null);
+												}
+											}}
+											autoFocus
+											style={{
+												width: '40px',
+												padding: '4px 6px',
+												backgroundColor: '#333',
+												color: '#fff',
+												border: '1px solid #666',
+												borderRadius: '2px',
+												fontSize: '12px',
+											}}
+										/>
+									</div>
+								) : (
+									<div
+										style={{
+											position: 'relative' as const,
+										}}
+										onMouseEnter={() => {
+											clearSubmenuTimeout();
+											if (subitem.submenu) {
+												setHoveredSubitem(subitem);
+											}
+										}}
+										onMouseLeave={(e) => {
+											const relatedTarget = e.relatedTarget as HTMLElement;
+											if (relatedTarget && (relatedTarget.closest('[data-submenu]') || relatedTarget.closest('[data-submenu-item]'))) {
+												return;
+											}
+											setSubmenuTimeout(() => {
+												setHoveredSubitem(null);
+											});
+										}}
+									>
+										<div
+											style={{
+												...styles.contextMenuItem,
+												borderBottom: idx === arr.length - 1 ? 'none' : '1px solid #444',
+												paddingRight: subitem.submenu ? '20px' : '12px',
+											}}
+											data-submenu-item="true"
+										onClick={(e) => {
+											e.stopPropagation();
+												if (shouldAddCustom && subitem.action) {
+													setQuantityInput({
+														value: '',
+														action: subitem.action,
+														metadata: subitem.metadata,
+													});
+												} else {
+													onMenuItemClick(subitem);
+												}
+											}}
+											onMouseEnter={(e) => {
+												(e.currentTarget as HTMLElement).style.backgroundColor = '#444';
+											}}
+											onMouseLeave={(e) => {
+												(e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+											}}
+										>
+											{subitem.label}
+											{subitem.submenu && <span style={styles.submenuArrow}>›</span>}
+										</div>
+										{/* Third-level submenu */}
+										{subitem.submenu && hoveredSubitem === subitem && <Submenu item={subitem} type={type} onMenuItemClick={onMenuItemClick} />}
+									</div>
+								)}
+
+								{/* Add custom quantity option after last quantity item */}
+								{shouldAddCustom && (
+									<div
+										style={{
+											position: 'relative' as const,
+										}}
+									>
+										<div
+											style={{
+												...styles.contextMenuItem,
+												borderBottom: 'none',
+											}}
+											data-submenu-item="true"
+										onClick={(e) => {
+											e.stopPropagation();
+												if (subitem.action) {
+													setQuantityInput({
+														value: '',
+														action: subitem.action,
+														metadata: subitem.metadata,
+													});
+												}
+											}}
+											onMouseEnter={(e) => {
+												(e.currentTarget as HTMLElement).style.backgroundColor = '#444';
+											}}
+											onMouseLeave={(e) => {
+												(e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+											}}
+										>
+											{subitem.action === 'create_token_copy' ? 'Create X' : 'Custom'}
+										</div>
+									</div>
+								)}
 							</div>
-							{/* Third-level submenu */}
-						</div>
-					))}
+						);
+					})}
 			</div>
 			{hoveredSubitem && hoveredSubitem.submenu && <Submenu item={hoveredSubitem} type={type} onMenuItemClick={onMenuItemClick} />}
 		</div>
