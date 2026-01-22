@@ -149,64 +149,72 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 				) : isGraveyard ? (
 					// Graveyard displays card fronts with offset stacking
 					count > 0 ? (
-					<div style={zoneStyles.stackContainer}
-						onClick={() => {
-							const graveyardCards = objects.filter((o) => o.zone === zone);
-							if (onGraveyardModalOpen) onGraveyardModalOpen(graveyardCards);
-						}}
-					>
-							{objects.filter((o) => o.zone === zone).map((obj, idx) => {
-								const imageUrl =
-									obj.card &&
-									obj.card.image_uris &&
-									obj.card.image_uris.normal
-										? obj.card.image_uris.normal
-										: null;
-								return (
-									<div
-										key={obj.id}
-										style={{
-											...zoneStyles.stackedCard,
-											zIndex: idx,
-											transform: `translate(${idx * 2}px, ${idx * 7}px)`,
-										}}
-										onContextMenu={(e) => {
-											e.preventDefault();
-											if (onContextMenu)
-												onContextMenu(e, obj.id);
-										}}
-										title={
-											obj.card ? obj.card.name : "Unknown"
-										}
-									>
-										{imageUrl ? (
-											<img
-												src={imageUrl}
-												alt={
-													obj.card
-														? obj.card.name
-														: "Unknown"
-												}
-												style={{
-													width: "100%",
-													height: "100%",
-													borderRadius: "4px",
-												}}
-											/>
-										) : (
-											<div
-												style={
-													zoneStyles.cardPlaceholder
-												}
-											>
-												{obj.card
-													? obj.card.name
-													: "Unknown"}
-											</div>
-										)}
-									</div>
+						<div
+							style={zoneStyles.stackContainer}
+							onClick={() => {
+								const graveyardCards = objects.filter(
+									(o) => o.zone === zone,
 								);
-							})}
+								if (onGraveyardModalOpen)
+									onGraveyardModalOpen(graveyardCards);
+							}}
+						>
+							{objects
+								.filter((o) => o.zone === zone)
+								.map((obj, idx) => {
+									const imageUrl =
+										obj.card &&
+										obj.card.image_uris &&
+										obj.card.image_uris.normal
+											? obj.card.image_uris.normal
+											: null;
+									return (
+										<div
+											key={obj.id}
+											style={{
+												...zoneStyles.stackedCard,
+												zIndex: idx,
+												transform: `translate(${idx * 2}px, ${idx * 7}px)`,
+											}}
+											onContextMenu={(e) => {
+												e.preventDefault();
+												if (onContextMenu)
+													onContextMenu(e, obj.id);
+											}}
+											title={
+												obj.card
+													? obj.card.name
+													: "Unknown"
+											}
+										>
+											{imageUrl ? (
+												<img
+													src={imageUrl}
+													alt={
+														obj.card
+															? obj.card.name
+															: "Unknown"
+													}
+													style={{
+														width: "100%",
+														height: "100%",
+														borderRadius: "4px",
+													}}
+												/>
+											) : (
+												<div
+													style={
+														zoneStyles.cardPlaceholder
+													}
+												>
+													{obj.card
+														? obj.card.name
+														: "Unknown"}
+												</div>
+											)}
+										</div>
+									);
+								})}
 						</div>
 					) : (
 						<div style={zoneStyles.emptyZone}>Empty</div>
@@ -217,34 +225,42 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 						<div
 							style={zoneStyles.stackContainer}
 							onClick={() => {
-								const exileCards = objects.filter((o) => o.zone === zone);
-								if (onExileModalOpen) onExileModalOpen(exileCards);
+								const exileCards = objects.filter(
+									(o) => o.zone === zone,
+								);
+								if (onExileModalOpen)
+									onExileModalOpen(exileCards);
 							}}
 						>
-							{objects.filter((o) => o.zone === zone).slice(0, 5).map((obj, idx) => (
-								<div
-									key={obj.id}
-									style={{
-										...zoneStyles.stackedCardBack,
-										zIndex: idx,
-										transform: `translate(${Math.min(idx * 5, 25)}px, ${Math.min(idx * 5, 25)}px)`,
-										cursor: "pointer",
-									}}
-									title={obj.card ? obj.card.name : "Unknown"}
-								>
+							{objects
+								.filter((o) => o.zone === zone)
+								.slice(0, 5)
+								.map((obj, idx) => (
 									<div
+										key={obj.id}
 										style={{
-											width: "100%",
-											height: "100%",
-											backgroundImage:
-												"url(/Magic_card_back.png)",
-											backgroundSize: "cover",
-											backgroundPosition: "center",
-											borderRadius: "4px",
+											...zoneStyles.stackedCardBack,
+											zIndex: idx,
+											transform: `translate(${Math.min(idx * 5, 25)}px, ${Math.min(idx * 5, 25)}px)`,
+											cursor: "pointer",
 										}}
-									/>
-								</div>
-							))}
+										title={
+											obj.card ? obj.card.name : "Unknown"
+										}
+									>
+										<div
+											style={{
+												width: "100%",
+												height: "100%",
+												backgroundImage:
+													"url(/Magic_card_back.png)",
+												backgroundSize: "cover",
+												backgroundPosition: "center",
+												borderRadius: "4px",
+											}}
+										/>
+									</div>
+								))}
 							{count > 3 && (
 								<div
 									style={{

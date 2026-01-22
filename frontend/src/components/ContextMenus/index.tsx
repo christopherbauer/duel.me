@@ -22,10 +22,12 @@ interface MenuItem {
 const typeToMenuItemsMap: (
 	objectId?: string,
 	availableTokens?: Card[],
+	availableComponents?: Card[],
 	position?: { x: number; y: number },
 ) => Record<ContextMenuType, MenuItem[]> = (
 	objectId,
 	availableTokens = [],
+	availableComponents = [],
 	position,
 ) => ({
 	[ContextMenuType.Library]: libraryMenuItems(),
@@ -34,7 +36,11 @@ const typeToMenuItemsMap: (
 	[ContextMenuType.Exile]: exileMenuItems(objectId),
 	[ContextMenuType.Battlefield]: objectId
 		? battlefieldMenuItems(objectId)
-		: backgroundTokenMenuItems(availableTokens, position),
+		: backgroundTokenMenuItems(
+				availableTokens,
+				availableComponents,
+				position,
+			),
 });
 interface ContextMenuProps {
 	x: number;
@@ -69,11 +75,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 		};
 	}, [onClose]);
 
-	const { availableTokens } = useGameStore();
+	const { availableTokens, availableComponents } = useGameStore();
 
 	const menuItems = useMemo(() => {
-		return typeToMenuItemsMap(objectId, availableTokens, { x, y })[type];
-	}, [type, objectId, availableTokens, x, y]);
+		return typeToMenuItemsMap(
+			objectId,
+			availableTokens,
+			availableComponents,
+			{ x, y },
+		)[type];
+	}, [type, objectId, availableTokens, availableComponents, x, y]);
 
 	const handleMenuItemClick = (item: MenuItem) => {
 		if (item.action) {
@@ -390,7 +401,7 @@ const styles = {
 		border: "1px solid #555",
 		borderRadius: "4px",
 		zIndex: 2000,
-		minWidth: "150px",
+		minWidth: "200px",
 		boxShadow: "0 4px 8px rgba(0, 0, 0, 0.3)",
 	},
 	contextMenuItem: {
@@ -413,7 +424,7 @@ const styles = {
 		backgroundColor: "#2a2a2a",
 		border: "1px solid #555",
 		borderRadius: "4px",
-		minWidth: "120px",
+		minWidth: "500px",
 		zIndex: 2001,
 		boxShadow: "0 4px 8px rgba(0, 0, 0, 0.3)",
 		overflow: "visible" as const,
@@ -633,22 +644,18 @@ const battlefieldMenuItems = (objectId?: string): MenuItem[] => {
 
 const backgroundTokenMenuItems = (
 	availableTokens: Card[],
+	availableComponents: Card[],
 	position?: { x: number; y: number },
 ): MenuItem[] => {
-	if (!availableTokens || availableTokens.length === 0) {
-		return [
-			{
-				label: "No tokens available",
-			},
-		];
-	}
+	const items: MenuItem[] = [];
 
-	return [
-		{
-			label: "Untap",
-			action: "untap_all",
-		},
-		{
+	items.push({
+		label: "Untap",
+		action: "untap_all",
+	});
+
+	if (availableTokens && availableTokens.length > 0) {
+		items.push({
 			label: "Create Token",
 			submenu: availableTokens.map((token) => {
 				const displayLabel =
@@ -698,7 +705,71 @@ const backgroundTokenMenuItems = (
 					],
 				};
 			}),
-		},
-	];
+		});
+	}
+
+	if (availableComponents && availableComponents.length > 0) {
+		items.push({
+			label: "Create Component",
+			submenu: availableComponents.map((component) => {
+				const displayLabel =
+					component.power && component.toughness
+						? `${component.name} - ${component.power}/${component.toughness}`
+						: component.name;
+
+				return {
+					label: displayLabel,
+					submenu: [
+						{
+							label: "1",
+							action: "create_token_copy",
+							metadata: {
+								tokenCardId: component.id,
+								quantity: 1,
+								position,
+							},
+						},
+						{
+							label: "2",
+							action: "create_token_copy",
+							metadata: {
+								tokenCardId: component.id,
+								quantity: 2,
+								position,
+							},
+						},
+						{
+							label: "3",
+							action: "create_token_copy",
+							metadata: {
+								tokenCardId: component.id,
+								quantity: 3,
+								position,
+							},
+						},
+						{
+							label: "4",
+							action: "create_token_copy",
+							metadata: {
+								tokenCardId: component.id,
+								quantity: 4,
+								position,
+							},
+						},
+					],
+				};
+			}),
+		});
+	}
+
+	if (items.length === 1) {
+		return [
+			{
+				label: "No tokens or components available",
+			},
+		];
+	}
+
+	return items;
 };
 export default ContextMenu;

@@ -12,9 +12,11 @@ import {
 } from "../types/game";
 import logger from "../core/logger";
 import { handleGameAction } from "./gameActions";
-import GamesStore from "../db/games";
-import GameStateStore from "../db/gameState";
+import GamesStore from "../db/GamesStore";
+import GameStateStore from "../db/GameStateStore";
 import { AllPartsQueryResult } from "../db/types";
+import CardsStore from "../db/CardsStore";
+import { NotFoundError } from "../core/errors";
 
 const router = Router();
 //in-memory store tokens for inclusion in gamestate responses
@@ -397,21 +399,21 @@ router.get("/:id/components", async (req, res) => {
 	};
 	const allPartsResult = await GamesStore().getAllParts(id);
 	const gameComponentList = extractComponents(allPartsResult || []);
-	const gameTokens = Object.values(gameComponentList)
-		.map((tokenInfo) => {
-			const tokenCard = tokenRecord[tokenInfo.name];
-			if (tokenCard) {
-				return tokenCard;
-			} else {
-				logger.warn(
-					`Component card not found for component name: ${tokenInfo.name}`,
-				);
-				return null;
-			}
-		})
-		.filter((token): token is Card => token !== null)
-		.sort((a, b) => a.name.localeCompare(b.name));
-	res.json(gameTokens);
+	const uniqueGameComponents = new Set(
+		Object.values(gameComponentList).map(
+			(componentInfo) => componentInfo.name,
+		),
+	);
+	const componentCards = await CardsStore().getCardsByName(
+		Array.from(uniqueGameComponents),
+	);
+	if (!componentCards) {
+		throw new NotFoundError();
+	}
+	const gameComponents = componentCards.sort((a, b) =>
+		a.name.localeCompare(b.name),
+	);
+	res.json(gameComponents);
 });
 
 export default router;

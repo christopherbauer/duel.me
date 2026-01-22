@@ -70,6 +70,16 @@ export const GameBoard: React.FC = () => {
 		}
 	}, [gameId]);
 
+	const loadAvailableComponents = useCallback(async () => {
+		if (!gameId) return;
+		try {
+			const response = await api.getGameComponents(gameId);
+			useGameStore.getState().setAvailableComponents(response.data);
+		} catch (err) {
+			console.error("Failed to load available components:", err);
+		}
+	}, [gameId]);
+
 	const executeAction: ActionMethod = useCallback(
 		async (action: string, seat?: number, metadata?: any) => {
 			if (!gameId || !gameState) return;
@@ -182,11 +192,18 @@ export const GameBoard: React.FC = () => {
 		if (gameId) {
 			loadGameState();
 			loadAvailableTokens();
+			loadAvailableComponents();
 			flippedSeatsRef.current.clear(); // Reset flipped seats when loading new game
 			const interval = setInterval(loadGameState, 5000);
 			return () => clearInterval(interval);
 		}
-	}, [gameId, viewerSeat, loadGameState, loadAvailableTokens]);
+	}, [
+		gameId,
+		viewerSeat,
+		loadGameState,
+		loadAvailableTokens,
+		loadAvailableComponents,
+	]);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {

@@ -83,11 +83,13 @@ export interface GameStore {
 	viewerSeat: 1 | 2;
 	gameState: GameState | null;
 	availableTokens: Card[];
+	availableComponents: Card[];
 
 	setCurrentGame: (gameId: string) => void;
 	setViewerSeat: (seat: 1 | 2) => void;
 	setGameState: (state: GameState) => void;
 	setAvailableTokens: (tokens: Card[]) => void;
+	setAvailableComponents: (components: Card[]) => void;
 	clearGame: () => void;
 }
 
@@ -96,16 +98,20 @@ export const useGameStore = create<GameStore>((set) => ({
 	viewerSeat: 1,
 	gameState: null,
 	availableTokens: [],
+	availableComponents: [],
 
 	setCurrentGame: (gameId: string) => set({ currentGameId: gameId }),
 	setViewerSeat: (seat: 1 | 2) => set({ viewerSeat: seat }),
 	setGameState: (state: GameState) => set({ gameState: state }),
 	setAvailableTokens: (tokens: Card[]) => set({ availableTokens: tokens }),
+	setAvailableComponents: (components: Card[]) =>
+		set({ availableComponents: components }),
 	clearGame: () =>
 		set({
 			currentGameId: null,
 			gameState: null,
 			viewerSeat: 1,
 			availableTokens: [],
+			availableComponents: [],
 		}),
 }));

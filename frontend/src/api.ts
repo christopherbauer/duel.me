@@ -29,6 +29,8 @@ export const api = {
 			params: { viewer_seat: viewerSeat || 1 },
 		}),
 	getGameTokens: (gameId: string) => client.get(`/games/${gameId}/tokens`),
+	getGameComponents: (gameId: string) =>
+		client.get(`/games/${gameId}/components`),
 	executeAction: (gameId: string, payload: any) =>
 		client.post(`/games/${gameId}/action`, payload),
 };
