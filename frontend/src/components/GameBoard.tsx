@@ -6,6 +6,7 @@ import ContextMenu from "./ContextMenus";
 import { ZoneDisplay, zoneStyles } from "./ZoneDisplay";
 import { ScryModal } from "./ScryModal";
 import { ExileModal } from "./ExileModal";
+import { GraveyardModal } from "./GraveyardModal";
 import { LibrarySearchModal } from "./LibrarySearchModal";
 import { ActionMethod } from "../types";
 
@@ -42,6 +43,7 @@ export const GameBoard: React.FC = () => {
 		cards: any[];
 	} | null>(null);
 	const [exileModal, setExileModal] = useState<any[] | null>(null);
+	const [graveyardModal, setGraveyardModal] = useState<any[] | null>(null);
 	const [librarySearchModal, setLibrarySearchModal] = useState<any[] | null>(
 		null,
 	);
@@ -435,6 +437,9 @@ export const GameBoard: React.FC = () => {
 									onExileModalOpen={(cards) =>
 										setExileModal(cards)
 									}
+									onGraveyardModalOpen={(cards) =>
+										setGraveyardModal(cards)
+									}
 								/>
 							),
 						)}
@@ -680,6 +685,9 @@ export const GameBoard: React.FC = () => {
 									onExileModalOpen={(cards) =>
 										setExileModal(cards)
 									}
+									onGraveyardModalOpen={(cards) =>
+										setGraveyardModal(cards)
+									}
 								/>
 							),
 						)}
@@ -736,6 +744,18 @@ export const GameBoard: React.FC = () => {
 						});
 					}}
 					onClose={() => setExileModal(null)}
+				/>
+			)}
+
+			{graveyardModal && (
+				<GraveyardModal
+					cards={graveyardModal}
+					onMoveCard={(cardId, zone) => {
+						executeAction(`move_to_${zone}`, undefined, {
+							objectId: cardId,
+						});
+					}}
+					onClose={() => setGraveyardModal(null)}
 				/>
 			)}
 

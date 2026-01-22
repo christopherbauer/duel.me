@@ -645,6 +645,10 @@ const backgroundTokenMenuItems = (
 
 	return [
 		{
+			label: "Untap",
+			action: "untap_all",
+		},
+		{
 			label: "Create Token",
 			submenu: availableTokens.map((token) => {
 				const displayLabel =

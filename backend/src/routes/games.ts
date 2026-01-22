@@ -374,4 +374,44 @@ router.get("/:id/tokens", async (req, res) => {
 	res.json(gameTokens);
 });
 
+router.get("/:id/components", async (req, res) => {
+	const { id } = req.params;
+	const extractComponents = (objects: AllPartsQueryResult[]) => {
+		const tokens: Record<string, { id: string; name: string }> = {};
+		for (const obj of objects) {
+			if (obj.all_parts && obj.all_parts.length > 0) {
+				for (const part of obj.all_parts) {
+					if (part.component === "combo_piece" && part.name) {
+						// Deduplicate by token name, not ID
+						if (!tokens[part.name]) {
+							tokens[part.name] = {
+								id: part.id,
+								name: part.name,
+							};
+						}
+					}
+				}
+			}
+		}
+		return tokens;
+	};
+	const allPartsResult = await GamesStore().getAllParts(id);
+	const gameComponentList = extractComponents(allPartsResult || []);
+	const gameTokens = Object.values(gameComponentList)
+		.map((tokenInfo) => {
+			const tokenCard = tokenRecord[tokenInfo.name];
+			if (tokenCard) {
+				return tokenCard;
+			} else {
+				logger.warn(
+					`Component card not found for component name: ${tokenInfo.name}`,
+				);
+				return null;
+			}
+		})
+		.filter((token): token is Card => token !== null)
+		.sort((a, b) => a.name.localeCompare(b.name));
+	res.json(gameTokens);
+});
+
 export default router;

@@ -1,10 +1,14 @@
-import { tap, untap, toggle_tap } from "./tap";
-import { shuffleLibrary } from "./shuffle";
-import { drawFromLibrary, moveToLibrary, scry, surveil } from "./library";
+import { tap, untap, toggleTap, untapAll } from "./tap";
+import {
+	drawFromLibrary,
+	moveToLibrary,
+	scry,
+	shuffleLibrary,
+	surveil,
+} from "./library";
 import { lifeChange } from "./lifeChange";
 import { exileTopFromLibrary, moveToExile } from "./exile";
-import { moveToHand } from "./hand";
-import { moveToBattlefield, moveToGraveyard } from "./play";
+import { moveToBattlefield, moveToGraveyard, moveToHand } from "./play";
 import { createTokenCopy, removeToken } from "./tokens";
 import { ActionMethod } from "./types";
 import { query } from "../../core/pool";
@@ -30,12 +34,14 @@ enum Actions {
 	remove_counter,
 	create_token_copy,
 	remove_token,
+	untap_all,
 }
 
 const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	tap: tap,
 	untap: untap,
-	toggle_tap: toggle_tap,
+	untap_all: untapAll,
+	toggle_tap: toggleTap,
 	shuffle_library: shuffleLibrary,
 	draw: drawFromLibrary,
 	life_change: lifeChange,

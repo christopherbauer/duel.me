@@ -17,6 +17,7 @@ interface ZoneDisplayProps {
 	};
 	onContextMenu?: (e: React.MouseEvent, objectId?: string) => void;
 	onExileModalOpen?: (cards: any[]) => void;
+	onGraveyardModalOpen?: (cards: any[]) => void;
 }
 
 const getCardsByType: (objects: any[]) => {
@@ -65,6 +66,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 	showBreakdown,
 	onContextMenu,
 	onExileModalOpen,
+	onGraveyardModalOpen,
 }) => {
 	const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
 	const count = objects.length;
@@ -118,20 +120,27 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 					count > 0 ? (
 						<div
 							style={{
-								...zoneStyles.libraryCardBack,
-								cursor: "pointer",
-								backgroundImage: "url(/Magic_card_back.png)",
-								backgroundSize: "cover",
-								backgroundPosition: "center",
+								...zoneStyles.stackContainer,
 							}}
-							onContextMenu={(e) => {
-								e.preventDefault();
-								if (onContextMenu) onContextMenu(e);
-							}}
-							onClick={onCountClick}
 						>
-							<div style={zoneStyles.libraryCardLabel}>
-								{count} cards
+							<div
+								style={{
+									...zoneStyles.stackedCardBack,
+									cursor: "pointer",
+									backgroundImage:
+										"url(/Magic_card_back.png)",
+									backgroundSize: "cover",
+									backgroundPosition: "center",
+								}}
+								onContextMenu={(e) => {
+									e.preventDefault();
+									if (onContextMenu) onContextMenu(e);
+								}}
+								onClick={onCountClick}
+							>
+								<div style={zoneStyles.libraryCardLabel}>
+									{count} cards
+								</div>
 							</div>
 						</div>
 					) : (
@@ -140,8 +149,13 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 				) : isGraveyard ? (
 					// Graveyard displays card fronts with offset stacking
 					count > 0 ? (
-						<div style={zoneStyles.stackContainer}>
-							{objects.map((obj, idx) => {
+					<div style={zoneStyles.stackContainer}
+						onClick={() => {
+							const graveyardCards = objects.filter((o) => o.zone === zone);
+							if (onGraveyardModalOpen) onGraveyardModalOpen(graveyardCards);
+						}}
+					>
+							{objects.filter((o) => o.zone === zone).map((obj, idx) => {
 								const imageUrl =
 									obj.card &&
 									obj.card.image_uris &&
@@ -203,10 +217,11 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 						<div
 							style={zoneStyles.stackContainer}
 							onClick={() => {
-								if (onExileModalOpen) onExileModalOpen(objects);
+								const exileCards = objects.filter((o) => o.zone === zone);
+								if (onExileModalOpen) onExileModalOpen(exileCards);
 							}}
 						>
-							{objects.slice(0, 5).map((obj, idx) => (
+							{objects.filter((o) => o.zone === zone).slice(0, 5).map((obj, idx) => (
 								<div
 									key={obj.id}
 									style={{
@@ -480,8 +495,8 @@ export const zoneStyles = {
 	},
 	stackedCardBack: {
 		position: "absolute" as const,
-		width: "50px",
-		height: "70px",
+		width: "100%",
+		height: "100%",
 		top: 0,
 		left: 0,
 		border: "2px solid #0d1f2d",
