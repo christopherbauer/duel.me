@@ -85,7 +85,7 @@ export const GameBoard: React.FC = () => {
 		}
 	}, [gameId]);
 
-	const executeAction: ActionMethod = useCallback(
+	const handleGameAction: ActionMethod = useCallback(
 		async (action: string, seat?: number, metadata?: any) => {
 			if (!gameId || !gameState) return;
 
@@ -236,6 +236,17 @@ export const GameBoard: React.FC = () => {
 		[gameId, scryModal, viewerSeat, loadGameState]
 	);
 
+	const handleRestartGame = useCallback(async () => {
+		if (!gameId) return;
+		try {
+			await api.restartGame(gameId);
+			setShowAuditLog(false);
+			await loadGameState();
+		} catch (err) {
+			console.error('Game restart failed:', err);
+		}
+	}, [gameId, loadGameState]);
+
 	useEffect(() => {
 		if (gameId) {
 			loadGameState();
@@ -263,12 +274,12 @@ export const GameBoard: React.FC = () => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.code === 'Space') {
 				e.preventDefault();
-				executeAction('end_turn');
+				handleGameAction('end_turn');
 			}
 		};
 		window.addEventListener('keydown', handleKeyDown);
 		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, [executeAction]);
+	}, [handleGameAction]);
 
 	useEffect(() => {
 		document.body.style.zoom = `${browserZoom}%`;
@@ -333,12 +344,12 @@ export const GameBoard: React.FC = () => {
 				Math.abs(newX - existingCard.position.x) < 3 &&
 				Math.abs(newY - existingCard.position.y) < 3
 			) {
-				executeAction('move_to_battlefield', undefined, {
+				handleGameAction('move_to_battlefield', undefined, {
 					objectId: cardId,
 					position: existingCard.position,
 				});
 			} else {
-				executeAction('move_to_battlefield', undefined, {
+				handleGameAction('move_to_battlefield', undefined, {
 					objectId: cardId,
 					position: { x: newX, y: newY },
 				});
@@ -350,7 +361,7 @@ export const GameBoard: React.FC = () => {
 			const x = e.clientX - rect.left - 75;
 			const y = e.clientY - rect.top - 100;
 
-			executeAction('move_to_battlefield', undefined, {
+			handleGameAction('move_to_battlefield', undefined, {
 				objectId: cardId,
 				position: { x, y },
 			});
@@ -421,7 +432,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction('life_change', viewerSeat === 1 ? 2 : 1, {
+										handleGameAction('life_change', viewerSeat === 1 ? 2 : 1, {
 											amount: -1,
 										})
 									}
@@ -431,7 +442,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction('life_change', viewerSeat === 1 ? 2 : 1, {
+										handleGameAction('life_change', viewerSeat === 1 ? 2 : 1, {
 											amount: 1,
 										})
 									}
@@ -442,19 +453,24 @@ export const GameBoard: React.FC = () => {
 						</div>
 					</div>
 					<div style={styles.zoneGrid}>
-						{['hand', 'library', 'graveyard', 'exile'].map((zone) => (
-							<ZoneDisplay
-								key={zone}
-								zone={zone}
-								label={zone.charAt(0).toUpperCase() + zone.slice(1)}
-								objects={opponentObjects.filter((o) => o.zone === zone)}
-								redacted={zone === 'hand' || zone === 'library'}
-								onCountClick={() => setShowZoneBreakdown(`opponent-${zone}`)}
-								showBreakdown={false}
-								onExileModalOpen={(cards) => setExileModal(cards)}
-								onGraveyardModalOpen={(cards) => setGraveyardModal(cards)}
-							/>
-						))}
+						{['hand', 'library', 'graveyard', 'command_zone', 'exile'].map((zone) => {
+							const zoneLabel = zone === 'command_zone' ? 'Commander' : zone.charAt(0).toUpperCase() + zone.slice(1);
+							return (
+								<ZoneDisplay
+									key={zone}
+									zone={zone}
+									label={zoneLabel}
+									seat={viewerSeat}
+									objects={opponentObjects.filter((o) => o.zone === zone)}
+									redacted={zone === 'hand' || zone === 'library'}
+									onCountClick={() => setShowZoneBreakdown(`opponent-${zone}`)}
+									showBreakdown={false}
+									onExileModalOpen={(cards) => setExileModal(cards)}
+									onGraveyardModalOpen={(cards) => setGraveyardModal(cards)}
+									onGameAction={handleGameAction}
+								/>
+							);
+						})}
 					</div>
 				</div>
 
@@ -548,7 +564,7 @@ export const GameBoard: React.FC = () => {
 										});
 									}}
 									onDoubleClick={() =>
-										executeAction('tap', undefined, {
+										handleGameAction('tap', undefined, {
 											objectId: obj.id,
 										})
 									}
@@ -566,7 +582,7 @@ export const GameBoard: React.FC = () => {
 					</div>
 
 					{/* Battlefield Indicators overlay */}
-					<BattlefieldIndicators indicators={gameState?.indicators} seat={viewerSeat} executeAction={executeAction} />
+					<BattlefieldIndicators indicators={gameState?.indicators} seat={viewerSeat} executeAction={handleGameAction} />
 
 					{/* Opponent card hover preview popup */}
 					{hoveredOpponentCard &&
@@ -598,7 +614,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction('life_change', viewerSeat === 1 ? 1 : 2, {
+										handleGameAction('life_change', viewerSeat === 1 ? 1 : 2, {
 											amount: -1,
 										})
 									}
@@ -608,7 +624,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										executeAction('life_change', viewerSeat === 1 ? 1 : 2, {
+										handleGameAction('life_change', viewerSeat === 1 ? 1 : 2, {
 											amount: 1,
 										})
 									}
@@ -619,28 +635,33 @@ export const GameBoard: React.FC = () => {
 						</div>
 					</div>
 					<div style={styles.zoneGrid}>
-						{['hand', 'library', 'graveyard', 'exile'].map((zone) => (
-							<ZoneDisplay
-								key={zone}
-								zone={zone}
-								label={zone.charAt(0).toUpperCase() + zone.slice(1)}
-								objects={playerObjects.filter((o) => o.zone === zone)}
-								redacted={false}
-								onCardDragStart={(cardId) => setDraggedCard(cardId)}
-								onCountClick={() => setShowZoneBreakdown(`player-${zone}`)}
-								showBreakdown={showZoneBreakdown === `player-${zone}`}
-								onContextMenu={(e, objectId) =>
-									setContextMenu({
-										x: e.clientX,
-										y: e.clientY,
-										type: zone as any,
-										objectId,
-									})
-								}
-								onExileModalOpen={(cards) => setExileModal(cards)}
-								onGraveyardModalOpen={(cards) => setGraveyardModal(cards)}
-							/>
-						))}
+						{['hand', 'library', 'graveyard', 'command_zone', 'exile'].map((zone) => {
+							const zoneLabel = zone === 'command_zone' ? 'Commander' : zone.charAt(0).toUpperCase() + zone.slice(1);
+							return (
+								<ZoneDisplay
+									key={zone}
+									zone={zone}
+									label={zoneLabel}
+									seat={viewerSeat}
+									objects={playerObjects.filter((o) => o.zone === zone)}
+									redacted={false}
+									onCardDragStart={(cardId) => setDraggedCard(cardId)}
+									onCountClick={() => setShowZoneBreakdown(`player-${zone}`)}
+									showBreakdown={showZoneBreakdown === `player-${zone}`}
+									onContextMenu={(e, objectId) =>
+										setContextMenu({
+											x: e.clientX,
+											y: e.clientY,
+											type: zone as any,
+											objectId,
+										})
+									}
+									onExileModalOpen={(cards) => setExileModal(cards)}
+									onGraveyardModalOpen={(cards) => setGraveyardModal(cards)}
+									onGameAction={handleGameAction}
+								/>
+							);
+						})}
 					</div>
 				</div>
 			</div>
@@ -656,8 +677,18 @@ export const GameBoard: React.FC = () => {
 					<button style={styles.footerButton} onClick={() => setShowAuditLog(true)}>
 						📋 Log
 					</button>
+					<button
+						style={styles.footerButton}
+						onClick={() => {
+							if (window.confirm('Are you sure you want to restart the game?')) {
+								handleRestartGame();
+							}
+						}}
+					>
+						🔄 Restart
+					</button>
 				</div>
-				<button style={styles.endTurnButton} onClick={() => executeAction('end_turn')}>
+				<button style={styles.endTurnButton} onClick={() => handleGameAction('end_turn')}>
 					End Turn
 				</button>
 			</div>
@@ -669,7 +700,7 @@ export const GameBoard: React.FC = () => {
 					type={contextMenu.type}
 					objectId={contextMenu.objectId}
 					onClose={() => setContextMenu(null)}
-					executeAction={executeAction}
+					executeAction={handleGameAction}
 				/>
 			)}
 
@@ -681,7 +712,7 @@ export const GameBoard: React.FC = () => {
 				<ExileModal
 					cards={exileModal}
 					onMoveCard={(cardId, zone) => {
-						executeAction(`move_to_${zone}`, undefined, {
+						handleGameAction(`move_to_${zone}`, undefined, {
 							objectId: cardId,
 						});
 					}}
@@ -693,7 +724,7 @@ export const GameBoard: React.FC = () => {
 				<GraveyardModal
 					cards={graveyardModal}
 					onMoveCard={(cardId, zone) => {
-						executeAction(`move_to_${zone}`, undefined, {
+						handleGameAction(`move_to_${zone}`, undefined, {
 							objectId: cardId,
 						});
 					}}
@@ -706,11 +737,11 @@ export const GameBoard: React.FC = () => {
 					cards={librarySearchModal}
 					onClose={() => setLibrarySearchModal(null)}
 					onCloseAndShuffle={() => {
-						executeAction('shuffle_library');
+						handleGameAction('shuffle_library');
 						setLibrarySearchModal(null);
 					}}
 					onMoveCard={(cardId, zone) => {
-						executeAction(`move_to_${zone}`, undefined, {
+						handleGameAction(`move_to_${zone}`, undefined, {
 							objectId: cardId,
 						});
 						// Keep modal open after moving
@@ -1134,7 +1165,7 @@ const styles = {
 	},
 	zoneGrid: {
 		display: 'grid',
-		gridTemplateColumns: '3fr 0.6fr 0.6fr 0.6fr',
+		gridTemplateColumns: '4fr 0.5fr 0.5fr 0.5fr 0.5fr',
 		gap: '5px',
 		flex: 1,
 		minHeight: 0,

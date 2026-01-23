@@ -72,24 +72,38 @@ const formatActionSummary = (action: GameAction): string => {
 export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onClose }) => {
 	const [actions, setActions] = useState<GameAction[]>([]);
 	const [loading, setLoading] = useState(false);
+	const [hasMore, setHasMore] = useState(true);
 	const [error, setError] = useState('');
 	const [page, setPage] = useState(1);
 	const [total, setTotal] = useState(0);
 	const [limit] = useState(50);
+	const logContainerRef = React.useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		if (isOpen) {
-			loadAuditLog();
+		if (isOpen && page === 1) {
+			loadAuditLog(1, true);
 		}
-	}, [isOpen, page, gameId]);
+	}, [isOpen, gameId]);
 
-	const loadAuditLog = async () => {
+	const loadAuditLog = async (pageNum: number, reset: boolean = false) => {
 		setLoading(true);
 		setError('');
 		try {
-			const response = await api.getGameActions(gameId, page, limit);
-			setActions(response.data.actions);
+			const response = await api.getGameActions(gameId, pageNum, limit);
+			const newActions = response.data.actions;
+
+			if (reset) {
+				setActions(newActions);
+			} else {
+				setActions((prev) => [...prev, ...newActions]);
+			}
+
 			setTotal(response.data.total);
+			setPage(pageNum);
+
+			// Check if there are more items to load
+			const totalLoaded = reset ? newActions.length : actions.length + newActions.length;
+			setHasMore(totalLoaded < response.data.total);
 		} catch (err: any) {
 			setError('Failed to load audit log');
 			console.error(err);
@@ -98,11 +112,18 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 		}
 	};
 
+	const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+		const container = e.currentTarget;
+		const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+
+		if (isAtBottom && hasMore && !loading) {
+			loadAuditLog(page + 1);
+		}
+	};
+
 	if (!isOpen) {
 		return null;
 	}
-
-	const totalPages = Math.ceil(total / limit);
 
 	return (
 		<div style={styles.overlay} onClick={onClose}>
@@ -126,10 +147,8 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 
 				{error && <div style={styles.error}>{error}</div>}
 
-				<div style={styles.logContainer}>
-					{loading ? (
-						<div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>Loading...</div>
-					) : actions.length === 0 ? (
+				<div style={styles.logContainer} ref={logContainerRef} onScroll={handleScroll}>
+					{actions.length === 0 && !loading ? (
 						<div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>No actions recorded yet</div>
 					) : (
 						<div style={styles.actionsList}>
@@ -142,31 +161,10 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 									</div>
 								</div>
 							))}
+							{loading && <div style={{ textAlign: 'center', padding: '15px', color: '#999' }}>Loading more...</div>}
 						</div>
 					)}
 				</div>
-
-				{totalPages > 1 && (
-					<div style={styles.pagination}>
-						<button
-							onClick={() => setPage(Math.max(1, page - 1))}
-							disabled={page === 1}
-							style={{ ...styles.pageButton, opacity: page === 1 ? 0.5 : 1 }}
-						>
-							← Previous
-						</button>
-						<span style={styles.pageInfo}>
-							Page {page} of {totalPages}
-						</span>
-						<button
-							onClick={() => setPage(Math.min(totalPages, page + 1))}
-							disabled={page === totalPages}
-							style={{ ...styles.pageButton, opacity: page === totalPages ? 0.5 : 1 }}
-						>
-							Next →
-						</button>
-					</div>
-				)}
 
 				<div style={styles.footer}>
 					<small style={{ color: '#666' }}>Total actions: {total}</small>

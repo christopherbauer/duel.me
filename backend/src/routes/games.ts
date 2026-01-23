@@ -19,6 +19,7 @@ import GameStateStore from '../db/GameStateStore';
 import { AllPartsQueryResult, IndicatorQueryResult } from '../db/types';
 import CardsStore from '../db/CardsStore';
 import { NotFoundError } from '../core/errors';
+import { drawFromLibrary, shuffleLibrary } from './gameActions/library';
 
 const router = Router();
 //in-memory store tokens for inclusion in gamestate responses
@@ -38,6 +39,65 @@ const retrieveTokens = async () => {
 	);
 };
 retrieveTokens();
+
+// Helper function to initialize game state
+const initializeGame = async (gameId: string, deck1_id: string, deck2_id: string) => {
+	// Initialize game state
+	await query(
+		`INSERT INTO game_state (game_session_id, seat1_life, seat2_life, active_seat, turn_number)
+       VALUES ($1, 40, 40, 1, 1)`,
+		[gameId]
+	);
+
+	// Get commander IDs first
+	const commandersByDeck: Record<number, string[]> = {};
+	for (const seat of [1, 2]) {
+		const deckId = seat === 1 ? deck1_id : deck2_id;
+		const deckResult = await query<CommanderIds>(`SELECT commander_ids FROM decks WHERE id = $1`, [deckId]);
+		if (deckResult && deckResult.rows[0]?.commander_ids) {
+			commandersByDeck[seat] = deckResult.rows[0].commander_ids;
+		} else {
+			commandersByDeck[seat] = [];
+		}
+	}
+
+	// Load decks into library zones (excluding commanders)
+	for (const seat of [1, 2]) {
+		const deckId = seat === 1 ? deck1_id : deck2_id;
+		const deckCardsResult = await query<DeckCards>(
+			`SELECT dc.card_id, dc.quantity FROM deck_cards dc WHERE dc.deck_id = $1 AND dc.zone = 'library'`,
+			[deckId]
+		);
+		if (!deckCardsResult) continue;
+		let libraryOrder = 0;
+		for (const row of deckCardsResult.rows) {
+			// Skip commanders - they should only be in command zone
+			if (commandersByDeck[seat].includes(row.card_id)) continue;
+
+			for (let i = 0; i < row.quantity; i++) {
+				await query(
+					`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id, "order")
+             VALUES ($1, $2, $3, 'library', $4, $5)`,
+					[uuidv4(), gameId, seat, row.card_id, libraryOrder]
+				);
+				libraryOrder++;
+			}
+		}
+
+		// Load commanders into command zone
+		if (commandersByDeck[seat] && commandersByDeck[seat].length > 0) {
+			for (const cmdId of commandersByDeck[seat]) {
+				await query(
+					`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id)
+             VALUES ($1, $2, $3, 'command_zone', $4)`,
+					[uuidv4(), gameId, seat, cmdId]
+				);
+			}
+		}
+		await shuffleLibrary(gameId, seat, {});
+		await drawFromLibrary(gameId, seat, { count: 7 });
+	}
+};
 
 /**
  * @swagger
@@ -99,45 +159,7 @@ router.post('/', async (req, res) => {
 		]);
 
 		// Initialize game state
-		await query(
-			`INSERT INTO game_state (game_session_id, seat1_life, seat2_life, active_seat, turn_number)
-       VALUES ($1, 40, 40, 1, 1)`,
-			[gameId]
-		);
-
-		// Load decks into library zones
-		for (const seat of [1, 2]) {
-			const deckId = seat === 1 ? deck1_id : deck2_id;
-			const deckCardsResult = await query<DeckCards>(
-				`SELECT dc.card_id, dc.quantity FROM deck_cards dc WHERE dc.deck_id = $1 AND dc.zone = 'library'`,
-				[deckId]
-			);
-			if (!deckCardsResult) continue;
-			let libraryOrder = 0;
-			for (const row of deckCardsResult.rows) {
-				for (let i = 0; i < row.quantity; i++) {
-					await query(
-						`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id, "order")
-             VALUES ($1, $2, $3, 'library', $4, $5)`,
-						[uuidv4(), gameId, seat, row.card_id, libraryOrder]
-					);
-					libraryOrder++;
-				}
-			}
-
-			// Load commanders
-			const deckResult = await query<CommanderIds>(`SELECT commander_ids FROM decks WHERE id = $1`, [deckId]);
-			if (!deckResult) continue;
-			if (deckResult.rows[0]?.commander_ids && deckResult.rows[0].commander_ids.length > 0) {
-				for (const cmdId of deckResult.rows[0].commander_ids) {
-					await query(
-						`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id)
-             VALUES ($1, $2, $3, 'command_zone', $4)`,
-						[uuidv4(), gameId, seat, cmdId]
-					);
-				}
-			}
-		}
+		await initializeGame(gameId, deck1_id, deck2_id);
 
 		res.status(201).json({ id: gameId, name: name || 'New Game' });
 	} catch (error) {
@@ -323,6 +345,37 @@ router.post('/:id/action', async (req: Request, res: Response) => {
 	}
 });
 
+router.post('/:id/restart', async (req, res) => {
+	const { id } = req.params;
+
+	try {
+		// Get current game to fetch deck IDs
+		const gameResult = await query<GameSession>('SELECT deck1_id, deck2_id FROM game_sessions WHERE id = $1', [id]);
+
+		if (!gameResult?.rows[0]) {
+			return res.status(404).json({ error: 'Game not found' });
+		}
+
+		const { deck1_id, deck2_id } = gameResult.rows[0];
+
+		// Clear all game data
+		await Promise.all([
+			query('DELETE FROM game_objects WHERE game_session_id = $1', [id]),
+			query('DELETE FROM game_actions WHERE game_session_id = $1', [id]),
+			query('DELETE FROM battlefield_indicators WHERE game_session_id = $1', [id]),
+			query('DELETE FROM game_state WHERE game_session_id = $1', [id]),
+		]);
+
+		// Re-initialize game
+		await initializeGame(id, deck1_id, deck2_id);
+
+		res.json({ success: true });
+	} catch (error) {
+		console.error('Game restart error:', error);
+		res.status(500).json({ error: 'Failed to restart game' });
+	}
+});
+
 router.get('/:id/tokens', async (req, res) => {
 	const { id } = req.params;
 	const extractTokens = (objects: AllPartsQueryResult[]) => {
@@ -428,12 +481,12 @@ router.get('/:id/actions', async (req, res) => {
 		const countResult = await query<{ count: number }>(`SELECT COUNT(*) as count FROM game_actions WHERE game_session_id = $1`, [id]);
 		const total = countResult?.rowCount;
 
-		// Get actions with pagination, ordered by creation time
+		// Get actions with pagination, ordered by creation time (latest first)
 		const actionsResult = await query<any>(
 			`SELECT id, seat, action_type, metadata, created_at 
 			 FROM game_actions 
 			 WHERE game_session_id = $1 
-			 ORDER BY created_at ASC 
+			 ORDER BY created_at DESC 
 			 LIMIT $2 OFFSET $3`,
 			[id, limit, offset]
 		);
