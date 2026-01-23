@@ -513,32 +513,47 @@ const getCardsByType: (objects: any[]) => {
 	lands: number;
 	other: number;
 } = (objects) => {
+	let creatures = 0;
+	let instants = 0;
+	let sorceries = 0;
+	let lands = 0;
+	let other = 0;
+
+	for (const o of objects) {
+		const typeLine = o.card && o.card.type_line;
+		if (!typeLine) {
+			continue;
+		}
+
+		const type = String(typeLine).toLowerCase();
+		const isCreature = type.includes('creature');
+		const isInstant = type.includes('instant');
+		const isSorcery = type.includes('sorcery');
+		const isLand = type.includes('land');
+
+		if (isCreature) {
+			creatures += 1;
+		}
+		if (isInstant) {
+			instants += 1;
+		}
+		if (isSorcery) {
+			sorceries += 1;
+		}
+		if (isLand) {
+			lands += 1;
+		}
+
+		if (!isCreature && !isInstant && !isSorcery && !isLand) {
+			other += 1;
+		}
+	}
+
 	return {
-		creatures: objects.filter((o) => {
-			const type = o.card && o.card.type_line;
-			return type && type.toLowerCase().includes('creature');
-		}).length,
-		instants: objects.filter((o) => {
-			const type = o.card && o.card.type_line;
-			return type && type.toLowerCase().includes('instant');
-		}).length,
-		sorceries: objects.filter((o) => {
-			const type = o.card && o.card.type_line;
-			return type && type.toLowerCase().includes('sorcery');
-		}).length,
-		lands: objects.filter((o) => {
-			const type = o.card && o.card.type_line;
-			return type && type.toLowerCase().includes('land');
-		}).length,
-		other: objects.filter((o) => {
-			const type = o.card && o.card.type_line;
-			return (
-				type &&
-				!type.toLowerCase().includes('creature') &&
-				!type.toLowerCase().includes('instant') &&
-				!type.toLowerCase().includes('sorcery') &&
-				!type.toLowerCase().includes('land')
-			);
-		}).length,
+		creatures,
+		instants,
+		sorceries,
+		lands,
+		other,
 	};
 };
