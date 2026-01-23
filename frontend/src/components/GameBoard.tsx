@@ -467,7 +467,7 @@ export const GameBoard: React.FC = () => {
 									key={zone}
 									zone={zone}
 									label={zoneLabel}
-									seat={viewerSeat}
+									seat={viewerSeat === 1 ? 2 : 1}
 									objects={opponentObjects.filter((o) => o.zone === zone)}
 									redacted={zone === 'hand' || zone === 'library'}
 									onCountClick={() => setShowZoneBreakdown(`opponent-${zone}`)}

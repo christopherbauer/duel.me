@@ -12,7 +12,6 @@ import { NotFoundError } from '../core/errors';
 import { drawFromLibrary, shuffleLibrary } from './gameActions/library';
 
 const router = Router();
-const tokenId = (card: Card) => `${card.type_line}-${card.power}/${card.toughness}-${card.name}`;
 //in-memory store tokens for inclusion in gamestate responses
 let tokenRecord: Record<string, Card[]> = {};
 const retrieveTokens = async () => {
