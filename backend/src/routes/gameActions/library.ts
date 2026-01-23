@@ -22,6 +22,22 @@ export const drawFromLibrary: ActionMethod<DrawMetadata> = async (gameId, seat, 
 	}
 };
 
+export const mill: ActionMethod<DrawMetadata> = async (gameId, seat, metadata) => {
+	const count = metadata.count || 1;
+	const millResult = await query<GameObjectId>(
+		`SELECT id 
+		FROM game_objects 
+		WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
+		ORDER BY "order", id
+		LIMIT $3`,
+		[gameId, seat, count]
+	);
+	if (millResult && millResult.rows) {
+		for (const row of millResult.rows) {
+			await query(`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`, [row.id]);
+		}
+	}
+};
 export const moveToLibrary: ActionMethod = async (_gameId, _seat, metadata) => {
 	// Move card back to library from anywhere
 	const objectId = metadata.objectId;
@@ -116,7 +132,7 @@ const getHalfRandom = (size: number) => Math.floor(size / 2) + getRandom(-2, 2);
 // Simulate a human-like riffle shuffle, didn't want to do pure random which generally feels "off"
 const humanRiffleShuffle = (cardIds: string[]): string[] => {
 	// Perform the riffle shuffle 2-3 times
-	const shuffleIterations = 3;
+	const shuffleIterations = getRandom(15, 30);
 	for (let iteration = 0; iteration < shuffleIterations; iteration++) {
 		// Split into two halves
 		const midpoint = getHalfRandom(cardIds.length);
@@ -153,6 +169,26 @@ const humanRiffleShuffle = (cardIds: string[]): string[] => {
 	return cardIds;
 };
 
+// Simulate a human chock shuffle: taking chunks and inverting them
+// Results in grouped reversed sections like: 89-100, 70-88, 49-70, 30-49, 15-30, 2-15, 1
+const humanChunkShuffle = (cardIds: string[]): string[] => {
+	const result: string[] = [];
+	let remaining = [...cardIds];
+
+	while (remaining.length > 0) {
+		// Determine chunk size with randomness (10-50% of remaining cards)
+		const minChunkSize = Math.max(1, Math.floor(remaining.length / 10));
+		const maxChunkSize = Math.max(minChunkSize + 1, Math.floor(remaining.length / 2));
+		const chunkSize = getRandom(minChunkSize, maxChunkSize);
+
+		// Take a chunk from the end and reverse it (simulates taking a packet and flipping it)
+		const chunk = remaining.splice(-chunkSize);
+		result.push(...chunk);
+	}
+
+	return result;
+};
+
 export const shuffleLibrary: ActionMethod = async (gameId, seat, _metadata) => {
 	// Shuffle library using human-like riffle shuffle algorithm
 	const libraryCardsResult = await query<{ id: string }>(
@@ -165,7 +201,17 @@ export const shuffleLibrary: ActionMethod = async (gameId, seat, _metadata) => {
 	if (libraryCardsResult && libraryCardsResult.rows) {
 		let cardIds = libraryCardsResult.rows.map((row) => row.id);
 
-		const shuffledCardIds = humanRiffleShuffle(cardIds);
+		const shuffleIterations = getRandom(5, 10);
+		let shuffledCardIds = cardIds;
+		for (let i = 0; i < shuffleIterations; i++) {
+			if (getRandom(1, 2) === 1) {
+				logger.info(`${gameId} - ${seat} - Chunk shuffle`);
+				shuffledCardIds = humanChunkShuffle(shuffledCardIds);
+			} else {
+				logger.info(`${gameId} - ${seat} - Riffle shuffle`);
+				shuffledCardIds = humanRiffleShuffle(shuffledCardIds);
+			}
+		}
 
 		// Batch update all library orders in a single query
 		if (shuffledCardIds.length > 0) {

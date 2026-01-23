@@ -38,24 +38,31 @@ export const ExileModal: React.FC<ExileModalProps> = ({ cards, onMoveCard, onClo
 			<div style={styles.modal} onClick={(e) => e.stopPropagation()}>
 				<div style={styles.header}>
 					<h2 style={styles.title}>Exile Zone ({cards.length} cards)</h2>
-					<button onClick={onClose} style={styles.closeButton}>
-						✕
-					</button>
 				</div>
-				<div style={styles.cardGrid}>
-					{cards.map((card) => {
-						const imageUrl = card.card && card.card.image_uris && card.card.image_uris.normal ? card.card.image_uris.normal : null;
-						return (
-							<div key={card.id} style={styles.cardContainer} onContextMenu={(e) => handleCardContextMenu(e, card.id)}>
-								{imageUrl ? (
-									<img src={imageUrl} alt={card.card ? card.card.name : 'Unknown'} style={styles.cardImage} />
+				<div style={styles.cardsGrid}>
+					{cards.length > 0 ? (
+						cards.map((card) => (
+							<div
+								key={card.id}
+								style={styles.cardWrapper}
+								onContextMenu={(e) => handleCardContextMenu(e, card.id)}
+								title={card.card?.name || 'Unknown'}
+							>
+								{card.card?.image_uris?.normal ? (
+									<img src={card.card.image_uris.normal} style={styles.cardImage} alt={card.card?.name || 'Card'} />
 								) : (
-									<div style={styles.cardPlaceholder}>{card.card ? card.card.name : 'Unknown'}</div>
+									<div style={styles.cardPlaceholder}>{card.card?.name || 'Unknown'}</div>
 								)}
-								<div style={styles.cardName}>{card.card ? card.card.name : 'Unknown'}</div>
 							</div>
-						);
-					})}
+						))
+					) : (
+						<div style={styles.noResults}>No cards in exile</div>
+					)}
+				</div>
+				<div style={styles.footer}>
+					<button onClick={onClose} style={styles.closeButton}>
+						Close
+					</button>
 				</div>
 
 				{contextMenu && (
@@ -116,90 +123,85 @@ const styles: Record<string, React.CSSProperties> = {
 		display: 'flex' as const,
 		alignItems: 'center' as const,
 		justifyContent: 'center' as const,
-		zIndex: 2000,
+		zIndex: 3000,
 	},
 	modal: {
-		backgroundColor: '#2a2a2a',
-		border: '2px solid #555',
+		backgroundColor: '#1a1a1a',
+		border: '2px solid #0066ff',
 		borderRadius: '8px',
 		padding: '20px',
-		maxWidth: '90vw',
+		width: '90vw',
 		maxHeight: '90vh',
 		display: 'flex' as const,
 		flexDirection: 'column' as const,
-		overflow: 'hidden' as const,
-		boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+		boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
 	},
 	header: {
-		display: 'flex' as const,
-		justifyContent: 'space-between' as const,
-		alignItems: 'center' as const,
-		marginBottom: '15px',
-		paddingBottom: '10px',
-		borderBottom: '1px solid #444',
+		marginBottom: '20px',
 	},
 	title: {
-		margin: 0,
+		margin: '0 0 12px 0',
+		fontSize: '18px',
+		fontWeight: 'bold' as const,
 		color: '#fff',
-		fontSize: '16px',
+	},
+	cardsGrid: {
+		display: 'grid' as const,
+		gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+		gap: '12px',
+		flex: 1,
+		overflowY: 'auto' as const,
+		marginBottom: '15px',
+		padding: '12px',
+		backgroundColor: 'rgba(0, 0, 0, 0.5)',
+		borderRadius: '4px',
+	},
+	cardWrapper: {
+		cursor: 'pointer',
+		borderRadius: '4px',
+		border: '1px solid transparent',
+		transition: 'border-color 0.2s',
+	},
+	cardImage: {
+		width: '100%',
+		height: 'auto',
+		borderRadius: '4px',
+		display: 'block',
+	},
+	cardPlaceholder: {
+		width: '100%',
+		height: '195px',
+		backgroundColor: '#2a2a2a',
+		border: '1px solid #555',
+		borderRadius: '4px',
+		display: 'flex' as const,
+		alignItems: 'center' as const,
+		justifyContent: 'center' as const,
+		fontSize: '10px',
+		color: '#aaa',
+		textAlign: 'center' as const,
+		padding: '8px',
+		boxSizing: 'border-box' as const,
+	},
+	noResults: {
+		gridColumn: '1 / -1',
+		textAlign: 'center' as const,
+		color: '#aaa',
+		padding: '20px',
+	},
+	footer: {
+		display: 'flex' as const,
+		gap: '10px',
+		justifyContent: 'flex-end' as const,
 	},
 	closeButton: {
+		padding: '8px 16px',
 		backgroundColor: '#444',
 		color: '#fff',
 		border: 'none',
 		borderRadius: '4px',
-		width: '32px',
-		height: '32px',
-		fontSize: '18px',
 		cursor: 'pointer',
-		display: 'flex' as const,
-		alignItems: 'center' as const,
-		justifyContent: 'center' as const,
-		transition: 'background-color 0.2s',
-	},
-	cardGrid: {
-		display: 'grid' as const,
-		gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-		gap: '12px',
-		overflowY: 'auto' as const,
-		flex: 1,
-		padding: '10px 0',
-	},
-	cardContainer: {
-		display: 'flex' as const,
-		flexDirection: 'column' as const,
-		alignItems: 'center' as const,
-		gap: '6px',
-	},
-	cardImage: {
-		width: '100%',
-		aspectRatio: '5 / 7',
-		borderRadius: '6px',
-		boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-		objectFit: 'cover' as const,
-	},
-	cardPlaceholder: {
-		width: '100%',
-		aspectRatio: '5 / 7',
-		backgroundColor: '#1a1a1a',
-		border: '1px solid #444',
-		borderRadius: '6px',
-		display: 'flex' as const,
-		alignItems: 'center' as const,
-		justifyContent: 'center' as const,
-		padding: '8px',
-		textAlign: 'center' as const,
-		fontSize: '11px',
-		color: '#bbb',
-	},
-	cardName: {
-		fontSize: '10px',
-		color: '#aaa',
-		textAlign: 'center' as const,
-		maxWidth: '100%',
-		overflow: 'hidden' as const,
-		textOverflow: 'ellipsis' as const,
-		whiteSpace: 'nowrap' as const,
+		fontSize: '12px',
 	},
 	contextMenu: {
 		position: 'fixed' as const,

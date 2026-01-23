@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
 import { Card, GameStateObjects, useGameStore } from '../store';
@@ -53,6 +53,10 @@ export const GameBoard: React.FC = () => {
 	const [librarySearchModal, setLibrarySearchModal] = useState<GameStateObjects[] | null>(null);
 	const [showAuditLog, setShowAuditLog] = useState(false);
 	const [lastMovedCardId, setLastMovedCardId] = useState<string | null>(null);
+	const [seat1Life, setSeat1Life] = useState<number>(0);
+	const [seat2Life, setSeat2Life] = useState<number>(0);
+	const [playerObjects, setPlayerObjects] = useState<GameStateObjects[]>([]);
+	const [opponentObjects, setOpponentObjects] = useState<GameStateObjects[]>([]);
 	const battlefieldRef = useRef<HTMLDivElement>(null);
 	const flippedSeatsRef = useRef<Set<number>>(new Set());
 
@@ -320,18 +324,25 @@ export const GameBoard: React.FC = () => {
 		}
 	}, [viewerSeat, gameState, setGameState]);
 
+	useEffect(() => {
+		if (gameState) {
+			const seat1Objects = gameState.objects.filter((obj) => obj.seat === 1);
+			const seat2Objects = gameState.objects.filter((obj) => obj.seat === 2);
+
+			setSeat1Life(gameState.seat1_life);
+			setSeat2Life(gameState.seat2_life);
+
+			const playerObjects = viewerSeat === 1 ? seat1Objects : seat2Objects;
+			setPlayerObjects(playerObjects);
+
+			const opponentObjects = viewerSeat === 1 ? seat2Objects : seat1Objects;
+			setOpponentObjects(opponentObjects);
+		}
+	}, [gameState, viewerSeat]);
+
 	if (!gameState) {
 		return <div style={styles.loading}>Loading game...</div>;
 	}
-
-	const seat1Objects = gameState.objects.filter((obj) => obj.seat === 1);
-	const seat2Objects = gameState.objects.filter((obj) => obj.seat === 2);
-
-	const seat1Life = gameState.seat1_life;
-	const seat2Life = gameState.seat2_life;
-
-	const playerObjects = viewerSeat === 1 ? seat1Objects : seat2Objects;
-	const opponentObjects = viewerSeat === 1 ? seat2Objects : seat1Objects;
 
 	function handleCardDropOnBattlefield(e: React.DragEvent<HTMLDivElement>, cardId: string) {
 		e.preventDefault();
@@ -368,7 +379,7 @@ export const GameBoard: React.FC = () => {
 			const x = e.clientX - rect.left - 75;
 			const y = e.clientY - rect.top - 100;
 
-			handleGameAction('move_to_battlefield', undefined, {
+			handleGameAction('cast', undefined, {
 				objectId: cardId,
 				position: { x, y },
 			});

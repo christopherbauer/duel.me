@@ -1,5 +1,5 @@
 import { tap, untap, toggleTap, untapAll } from './tap';
-import { drawFromLibrary, moveToLibrary, scry, shuffleLibrary, surveil } from './library';
+import { drawFromLibrary, moveToLibrary, scry, shuffleLibrary, surveil, mill } from './library';
 import { lifeChange } from './lifeChange';
 import { exileTopFromLibrary, moveToExile } from './exile';
 import { moveToBattlefield, moveToGraveyard, moveToHand, cast } from './play';
@@ -16,6 +16,7 @@ enum Actions {
 	untap,
 	toggle_tap,
 	shuffle_library,
+	mill,
 	draw,
 	life_change,
 	exile_from_top,
@@ -45,6 +46,7 @@ const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	untap_all: untapAll,
 	toggle_tap: toggleTap,
 	shuffle_library: shuffleLibrary,
+	mill: mill,
 	draw: drawFromLibrary,
 	life_change: lifeChange,
 	exile_from_top: exileTopFromLibrary,

@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../api';
+import { Card, GameStateObjects, useGameStore } from '../store';
 
 interface GameAction {
 	id: string;
@@ -7,12 +8,6 @@ interface GameAction {
 	action_type: string;
 	metadata?: Record<string, any>;
 	created_at: string;
-}
-
-interface GameAuditLogProps {
-	gameId: string;
-	isOpen: boolean;
-	onClose: () => void;
 }
 
 const actionTypeLabels: Record<string, string> = {
@@ -65,13 +60,16 @@ const formatActionSummary = (action: GameAction): string => {
 		details = ` x${metadata.quantity}`;
 	} else if (action.action_type === 'create_indicator' && metadata.color) {
 		details = ` (${metadata.color})`;
-	} else if (action.action_type === 'end_turn') {
-		details = 'End Turn';
 	}
 
-	return `${label}${details}`;
+	return `${label} ${details}`;
 };
 
+interface GameAuditLogProps {
+	gameId: string;
+	isOpen: boolean;
+	onClose: () => void;
+}
 export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onClose }) => {
 	const [actions, setActions] = useState<GameAction[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -80,8 +78,12 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 	const [page, setPage] = useState(1);
 	const [total, setTotal] = useState(0);
 	const [limit] = useState(50);
+	const { gameState } = useGameStore();
 	const logContainerRef = React.useRef<HTMLDivElement>(null);
 
+	const gameObjects = useMemo(() => {
+		return gameState?.objects || [];
+	}, [gameState]);
 	const loadAuditLog = useCallback(
 		async (pageNum: number, reset: boolean = false) => {
 			setLoading(true);
@@ -126,6 +128,14 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 		}
 	};
 
+	const cardRecords: Record<string, GameStateObjects> = useMemo(() => {
+		const records: Record<string, GameStateObjects> = {};
+		const filteredGameObjects = gameObjects.filter((obj) => obj.card);
+		for (const gameObject of filteredGameObjects) {
+			records[gameObject.id] = gameObject;
+		}
+		return records;
+	}, [gameObjects]);
 	if (!isOpen) {
 		return null;
 	}
@@ -162,7 +172,13 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 									<div style={styles.actionTime}>{new Date(action.created_at).toLocaleTimeString()}</div>
 									<div style={styles.actionContent}>
 										<span style={styles.actionSeat}>Seat {action.seat}</span>
-										<span style={styles.actionSummary}>{formatActionSummary(action)}</span>
+										<span style={styles.actionSummary}>
+											<span style={{ fontWeight: 'bold' }}>
+												{[formatActionSummary(action), action?.metadata?.objectId && cardRecords[action?.metadata?.objectId]?.card?.name]
+													.filter(Boolean)
+													.join(' ')}
+											</span>
+										</span>
 									</div>
 								</div>
 							))}
