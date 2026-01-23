@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
 
 interface GameAction {
@@ -79,39 +79,41 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 	const [limit] = useState(50);
 	const logContainerRef = React.useRef<HTMLDivElement>(null);
 
+	const loadAuditLog = useCallback(
+		async (pageNum: number, reset: boolean = false) => {
+			setLoading(true);
+			setError('');
+			try {
+				const response = await api.getGameActions(gameId, pageNum, limit);
+				const newActions = response.data.actions;
+
+				if (reset) {
+					setActions(newActions);
+				} else {
+					setActions((prev) => [...prev, ...newActions]);
+				}
+
+				setTotal(response.data.total);
+				setPage(pageNum);
+
+				// Check if there are more items to load
+				const totalLoaded = reset ? newActions.length : actions.length + newActions.length;
+				setHasMore(totalLoaded < response.data.total);
+			} catch (err: any) {
+				setError('Failed to load audit log');
+				console.error(err);
+			} finally {
+				setLoading(false);
+			}
+		},
+		[actions.length, gameId, limit]
+	);
+
 	useEffect(() => {
 		if (isOpen && page === 1) {
 			loadAuditLog(1, true);
 		}
-	}, [isOpen, gameId]);
-
-	const loadAuditLog = async (pageNum: number, reset: boolean = false) => {
-		setLoading(true);
-		setError('');
-		try {
-			const response = await api.getGameActions(gameId, pageNum, limit);
-			const newActions = response.data.actions;
-
-			if (reset) {
-				setActions(newActions);
-			} else {
-				setActions((prev) => [...prev, ...newActions]);
-			}
-
-			setTotal(response.data.total);
-			setPage(pageNum);
-
-			// Check if there are more items to load
-			const totalLoaded = reset ? newActions.length : actions.length + newActions.length;
-			setHasMore(totalLoaded < response.data.total);
-		} catch (err: any) {
-			setError('Failed to load audit log');
-			console.error(err);
-		} finally {
-			setLoading(false);
-		}
-	};
-
+	}, [isOpen, gameId, page, loadAuditLog]);
 	const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
 		const container = e.currentTarget;
 		const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
