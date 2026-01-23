@@ -543,7 +543,10 @@ const backgroundTokenMenuItems = (
 			submenu: availableTokens.map((token) => {
 				const displayLabel =
 					token.power && token.toughness
-						? [`${token.name} - ${token.power}/${token.toughness}`, token.oracle_text.length > 0 ? token.oracle_text : undefined]
+						? [
+								`${token.name} - ${token.power}/${token.toughness} ${token.colors.join('/')} ${token.type_line}`,
+								token.oracle_text?.length > 0 ? token.oracle_text : undefined,
+							]
 								.filter(Boolean)
 								.join(' - ')
 						: token.name;
