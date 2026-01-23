@@ -52,6 +52,7 @@ export const GameBoard: React.FC = () => {
 	const [graveyardModal, setGraveyardModal] = useState<any[] | null>(null);
 	const [librarySearchModal, setLibrarySearchModal] = useState<any[] | null>(null);
 	const [showAuditLog, setShowAuditLog] = useState(false);
+	const [lastMovedCardId, setLastMovedCardId] = useState<string | null>(null);
 	const battlefieldRef = useRef<HTMLDivElement>(null);
 	const flippedSeatsRef = useRef<Set<number>>(new Set());
 
@@ -207,6 +208,12 @@ export const GameBoard: React.FC = () => {
 					action_type: action,
 					metadata,
 				});
+
+				// Track card movements to battlefield
+				if ((action === 'move_to_battlefield' || action === 'cast') && metadata?.objectId) {
+					setLastMovedCardId(metadata.objectId);
+				}
+
 				await loadGameState();
 			} catch (err) {
 				console.error('Action failed:', err);
@@ -574,6 +581,10 @@ export const GameBoard: React.FC = () => {
 										top: `${obj.position ? obj.position.y : 0}px`,
 										opacity: draggedCard === obj.id ? 0.5 : 1,
 										transform: invertOpponent && obj.seat !== viewerSeat ? 'rotate(180deg)' : undefined,
+										zIndex:
+											obj.id === lastMovedCardId
+												? gameState.objects.filter((o) => o.zone === 'battlefield' && o.seat === viewerSeat).length
+												: 1,
 									}}
 								>
 									<CardImage card={obj.card} isTapped={obj.is_tapped} scale={cardScale} counters={obj.counters} />

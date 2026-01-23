@@ -542,7 +542,11 @@ const backgroundTokenMenuItems = (
 			label: 'Create Token',
 			submenu: availableTokens.map((token) => {
 				const displayLabel =
-					token.power && token.toughness ? `${token.name} - ${token.power}/${token.toughness} - ${token.oracle_text}` : token.name;
+					token.power && token.toughness
+						? [`${token.name} - ${token.power}/${token.toughness}`, token.oracle_text.length > 0 ? token.oracle_text : undefined]
+								.filter(Boolean)
+								.join(' - ')
+						: token.name;
 
 				return {
 					label: displayLabel,
