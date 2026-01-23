@@ -23,7 +23,6 @@ const TokenCreationMenu: React.FC<TokenCreationMenuProps> = ({ x, y, onClose, ex
 	}, [onClose]);
 
 	const handleTokenCreation = (tokenCardId: string, quantity: number) => {
-		console.log('token');
 		executeAction('create_token_copy', undefined, {
 			tokenCardId,
 			quantity,

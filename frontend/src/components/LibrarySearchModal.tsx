@@ -2,6 +2,16 @@ import React, { useState } from 'react';
 
 interface Card {
 	id: string;
+	cmc: string | null;
+	color_identity: string[] | null;
+	colors: string[] | null;
+	keywords: string[] | null;
+	layout: string | null;
+	mana_cost: string | null;
+	oracle_text: string | null;
+	power: string | null;
+	toughness: string | null;
+	type_line: string;
 	card?: {
 		name: string;
 		image_uris?: {
@@ -27,11 +37,12 @@ interface ContextMenu {
 export const LibrarySearchModal: React.FC<LibrarySearchModalProps> = ({ cards, onClose, onCloseAndShuffle, onMoveCard, onContextMenu }) => {
 	const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
 	const [searchTerm, setSearchTerm] = useState('');
+	console.log(cards);
 
 	const filteredCards = cards.filter((card) => {
 		if (!searchTerm) return true;
 		const cardName = card.card?.name || '';
-		return cardName.toLowerCase().includes(searchTerm.toLowerCase());
+		return (cardName + card.type_line).toLowerCase().includes(searchTerm.toLowerCase());
 	});
 
 	const handleCardContextMenu = (e: React.MouseEvent, cardId: string) => {

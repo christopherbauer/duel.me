@@ -65,6 +65,8 @@ const formatActionSummary = (action: GameAction): string => {
 		details = ` x${metadata.quantity}`;
 	} else if (action.action_type === 'create_indicator' && metadata.color) {
 		details = ` (${metadata.color})`;
+	} else if (action.action_type === 'end_turn') {
+		details = 'End Turn';
 	}
 
 	return `${label}${details}`;

@@ -79,13 +79,10 @@ export const DeckLoader: React.FC<DeckLoaderProps> = ({ deckId, onDeckCreated, o
 				const cardName = match[2].trim();
 				const searchPromise = (async () => {
 					try {
-						console.log(`[DeckLoader] Searching for card: "${cardName}"`);
-
 						// Try searching with the exact name first
 						let response = await api.searchCards(cardName, 5);
 
 						if (!response.data || response.data.length === 0) {
-							console.log(`[DeckLoader] No results for "${cardName}"`);
 							return null;
 						}
 
@@ -96,24 +93,18 @@ export const DeckLoader: React.FC<DeckLoaderProps> = ({ deckId, onDeckCreated, o
 							foundCard = response.data[0];
 						}
 
-						console.log(`[DeckLoader] Found card: "${foundCard.name}", type: "${foundCard.type_line}"`);
-
 						if (
 							foundCard.type_line &&
 							foundCard.type_line.toLowerCase().includes('legendary') &&
 							foundCard.type_line.toLowerCase().includes('creature')
 						) {
-							console.log(`[DeckLoader] "${foundCard.name}" is a legendary creature ✓`);
 							return {
 								name: foundCard.name,
 								type_line: foundCard.type_line,
 							};
 						} else {
-							console.log(`[DeckLoader] "${foundCard.name}" is not a legendary creature (type: ${foundCard.type_line})`);
 						}
-					} catch (err) {
-						console.error(`[DeckLoader] Error searching for "${cardName}":`, err);
-					}
+					} catch (err) {}
 					return null;
 				})();
 				searchPromises.push(searchPromise);
@@ -122,11 +113,6 @@ export const DeckLoader: React.FC<DeckLoaderProps> = ({ deckId, onDeckCreated, o
 
 		const results = await Promise.all(searchPromises);
 		const validLegends = results.filter((result) => result !== null) as LegendaryCard[];
-
-		console.log(
-			`[DeckLoader] Found ${validLegends.length} legendary creatures:`,
-			validLegends.map((l) => l.name)
-		);
 
 		setLegendaryCards(validLegends);
 
