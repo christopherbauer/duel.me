@@ -9,8 +9,12 @@ const CardsStore = () => {
 			return result?.rows;
 		});
 	};
+	const getTokens = () => {
+		return query<Card>("SELECT * from cards c where c.layout = 'token'");
+	};
 	return {
 		getCardsByName,
+		getTokens,
 	};
 };
 

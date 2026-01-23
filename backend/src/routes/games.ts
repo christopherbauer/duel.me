@@ -1,41 +1,35 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../core/pool';
 import { v4 as uuidv4 } from 'uuid';
-import {
-	GameSession,
-	GameState,
-	GameStateView,
-	DeckCards,
-	CommanderIds,
-	GameStateQueryResult,
-	Card,
-	Indicator,
-	GameAuditLogResponse,
-} from '../types/game';
+import { GameSession, GameStateView, DeckCards, CommanderIds, Card, Indicator } from '../types/game';
 import logger from '../core/logger';
 import { handleGameAction } from './gameActions';
 import GamesStore from '../db/GamesStore';
 import GameStateStore from '../db/GameStateStore';
-import { AllPartsQueryResult, IndicatorQueryResult } from '../db/types';
+import { AllPartsQueryResult } from '../db/types';
 import CardsStore from '../db/CardsStore';
 import { NotFoundError } from '../core/errors';
 import { drawFromLibrary, shuffleLibrary } from './gameActions/library';
 
 const router = Router();
+const tokenId = (card: Card) => `${card.type_line}-${card.power}/${card.toughness}-${card.name}`;
 //in-memory store tokens for inclusion in gamestate responses
-let tokenRecord: Record<string, Card> = {};
+let tokenRecord: Record<string, Card[]> = {};
 const retrieveTokens = async () => {
 	logger.info('Retrieving token cards from database...');
-	const tokens = await query<Card>("SELECT * from cards c where c.layout = 'token'");
+	const tokens = await CardsStore().getTokens();
 	if (!tokens) {
 		throw new Error('Failed to retrieve tokens from database');
 	}
 	tokenRecord = Object.values(tokens.rows).reduce(
 		(acc, token) => {
-			acc[token.name] = token;
+			if (!(token.name in acc)) {
+				acc[token.name] = [];
+			}
+			acc[token.name].push(token);
 			return acc;
 		},
-		{} as Record<string, Card>
+		{} as Record<string, Card[]>
 	);
 };
 retrieveTokens();
@@ -400,10 +394,10 @@ router.get('/:id/tokens', async (req, res) => {
 	const allPartsResult = await GamesStore().getAllParts(id);
 	const gameTokenList = extractTokens(allPartsResult || []);
 	const gameTokens = Object.values(gameTokenList)
-		.map((tokenInfo) => {
-			const tokenCard = tokenRecord[tokenInfo.name];
-			if (tokenCard) {
-				return tokenCard;
+		.flatMap((tokenInfo) => {
+			const tokenCards = tokenRecord[tokenInfo.name];
+			if (tokenCards) {
+				return tokenCards;
 			} else {
 				logger.warn(`Token card not found for token name: ${tokenInfo.name}`);
 				return null;

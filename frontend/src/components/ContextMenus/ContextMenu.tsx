@@ -541,7 +541,8 @@ const backgroundTokenMenuItems = (
 		items.push({
 			label: 'Create Token',
 			submenu: availableTokens.map((token) => {
-				const displayLabel = token.power && token.toughness ? `${token.name} - ${token.power}/${token.toughness}` : token.name;
+				const displayLabel =
+					token.power && token.toughness ? `${token.name} - ${token.power}/${token.toughness} - ${token.oracle_text}` : token.name;
 
 				return {
 					label: displayLabel,
