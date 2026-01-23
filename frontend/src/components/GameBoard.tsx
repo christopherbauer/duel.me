@@ -10,7 +10,7 @@ import { GraveyardModal } from './GraveyardModal';
 import { LibrarySearchModal } from './LibrarySearchModal';
 import { BattlefieldIndicators } from './BattlefieldIndicators';
 import { GameAuditLog } from './GameAuditLog';
-import { ActionMethod } from '../types';
+import { ActionMethod, Zone, ZoneNames } from '../types';
 
 export const GameBoard: React.FC = () => {
 	const { gameId } = useParams<{ gameId: string }>();
@@ -657,8 +657,9 @@ export const GameBoard: React.FC = () => {
 						</div>
 					</div>
 					<div style={styles.zoneGrid}>
-						{['hand', 'library', 'graveyard', 'command_zone', 'exile'].map((zone) => {
-							const zoneLabel = zone === 'command_zone' ? 'Commander' : zone.charAt(0).toUpperCase() + zone.slice(1);
+						{[Zone.hand, Zone.library, Zone.graveyard, Zone.command_zone, Zone.exile].map((zone) => {
+							const zoneLabel = ZoneNames[zone];
+
 							return (
 								<ZoneDisplay
 									key={zone}
@@ -674,7 +675,7 @@ export const GameBoard: React.FC = () => {
 										setContextMenu({
 											x: e.clientX,
 											y: e.clientY,
-											type: zone as any,
+											type: zone,
 											objectId,
 										})
 									}

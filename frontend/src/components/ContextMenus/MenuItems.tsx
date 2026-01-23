@@ -69,6 +69,11 @@ export const handMenuItems = (objectId?: string): MenuItem[] => [
 ];
 export const graveyardMenuItems = (objectId?: string): MenuItem[] => [
 	{
+		label: 'Cast',
+		action: 'cast',
+		metadata: { objectId },
+	},
+	{
 		label: 'Return to Hand',
 		action: 'move_to_hand',
 		metadata: { objectId },
@@ -80,6 +85,11 @@ export const graveyardMenuItems = (objectId?: string): MenuItem[] => [
 	},
 ];
 export const exileMenuItems = (objectId?: string): MenuItem[] => [
+	{
+		label: 'Cast',
+		action: 'cast',
+		metadata: { objectId },
+	},
 	{
 		label: 'Return to Hand',
 		action: 'move_to_hand',

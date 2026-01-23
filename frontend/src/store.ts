@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Zone } from './types';
 
 export interface Indicator {
 	id: string;
@@ -77,13 +78,6 @@ export interface Counters {
 export interface Position {
 	x: number;
 	y: number;
-}
-
-export enum Zone {
-	Battlefield = 'battlefield',
-	CommandZone = 'command_zone',
-	Library = 'library',
-	Exile = 'exile',
 }
 
 export interface GameStore {

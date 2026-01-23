@@ -19,7 +19,7 @@ export const ExileModal: React.FC<ExileModalProps> = ({ cards, onMoveCard, onClo
 		setContextMenu({ x: e.clientX, y: e.clientY, cardId });
 	};
 
-	const handleMoveCard = (zone: 'hand' | 'library' | 'graveyard' | 'exile') => {
+	const handleMoveCard = (zone: 'battlefield' | 'hand' | 'library' | 'graveyard' | 'exile') => {
 		if (contextMenu) {
 			onMoveCard(contextMenu.cardId, zone);
 			setContextMenu(null);
@@ -73,6 +73,14 @@ export const ExileModal: React.FC<ExileModalProps> = ({ cards, onMoveCard, onClo
 							top: `${contextMenu.y}px`,
 						}}
 					>
+						<div
+							style={styles.contextMenuItem}
+							onClick={() => handleMoveCard('battlefield')}
+							onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#444')}
+							onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+						>
+							Cast{' '}
+						</div>
 						<div
 							style={styles.contextMenuItem}
 							onClick={() => handleMoveCard('hand')}

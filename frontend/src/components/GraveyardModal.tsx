@@ -19,7 +19,7 @@ export const GraveyardModal: React.FC<GraveyardModalProps> = ({ cards, onMoveCar
 		setContextMenu({ x: e.clientX, y: e.clientY, cardId });
 	};
 
-	const handleMoveCard = (zone: 'hand' | 'library' | 'graveyard' | 'exile') => {
+	const handleMoveCard = (zone: 'hand' | 'library' | 'graveyard' | 'exile' | 'battlefield') => {
 		if (contextMenu) {
 			onMoveCard(contextMenu.cardId, zone);
 			setContextMenu(null);
@@ -73,6 +73,14 @@ export const GraveyardModal: React.FC<GraveyardModalProps> = ({ cards, onMoveCar
 							top: `${contextMenu.y}px`,
 						}}
 					>
+						<div
+							style={styles.contextMenuItem}
+							onClick={() => handleMoveCard('battlefield')}
+							onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#444')}
+							onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+						>
+							Cast
+						</div>
 						<div
 							style={styles.contextMenuItem}
 							onClick={() => handleMoveCard('hand')}
