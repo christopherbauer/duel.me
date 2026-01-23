@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
-import { Card, useGameStore } from '../store';
+import { Card, GameStateObjects, useGameStore } from '../store';
 import ContextMenu from './ContextMenus';
 import { ZoneDisplay, zoneStyles } from './ZoneDisplay';
 import { ScryModal } from './ScryModal';
@@ -50,7 +50,7 @@ export const GameBoard: React.FC = () => {
 	} | null>(null);
 	const [exileModal, setExileModal] = useState<any[] | null>(null);
 	const [graveyardModal, setGraveyardModal] = useState<any[] | null>(null);
-	const [librarySearchModal, setLibrarySearchModal] = useState<any[] | null>(null);
+	const [librarySearchModal, setLibrarySearchModal] = useState<GameStateObjects[] | null>(null);
 	const [showAuditLog, setShowAuditLog] = useState(false);
 	const [lastMovedCardId, setLastMovedCardId] = useState<string | null>(null);
 	const battlefieldRef = useRef<HTMLDivElement>(null);
@@ -745,7 +745,7 @@ export const GameBoard: React.FC = () => {
 
 			{librarySearchModal && (
 				<LibrarySearchModal
-					cards={librarySearchModal}
+					gameStateObjects={librarySearchModal}
 					onClose={() => setLibrarySearchModal(null)}
 					onCloseAndShuffle={() => {
 						handleGameAction('shuffle_library');

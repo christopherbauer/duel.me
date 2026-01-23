@@ -1,10 +1,15 @@
 import { query } from '../../core/pool';
+import GameObjectsStore from '../../db/GameObjectsStore';
 import { ActionMethod } from './types';
 
 interface MoveToBattlefieldMetadata {
 	objectId: string;
 	position?: { x: number; y: number };
 }
+const checkToken = async (objectId: string): Promise<boolean> => {
+	const result = await query<{ is_token: boolean }>(`SELECT is_token FROM game_objects WHERE id = $1`, [objectId]);
+	return result?.rows?.[0]?.is_token || false;
+};
 export const moveToBattlefield: ActionMethod<MoveToBattlefieldMetadata> = async (_gameId, _seat, metadata) => {
 	const objectId = metadata.objectId;
 	const position = metadata.position;
@@ -30,14 +35,14 @@ export const moveToGraveyard: ActionMethod = async (_gameId, _seat, metadata) =>
 	const objectId = metadata.objectId;
 	if (objectId) {
 		// Check if it's a token
-		const checkToken = await query<{ is_token: boolean }>(`SELECT is_token FROM game_objects WHERE id = $1`, [objectId]);
+		const isToken = await checkToken(objectId);
 
-		if (checkToken?.rows?.[0]?.is_token) {
+		if (isToken) {
 			// Delete token
-			await query(`DELETE FROM game_objects WHERE id = $1`, [objectId]);
+			await GameObjectsStore().deleteToken(objectId);
 		} else {
 			// Move card to graveyard
-			await query(`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`, [objectId]);
+			await GameObjectsStore().moveToGraveyard(objectId);
 		}
 	}
 };
@@ -45,14 +50,13 @@ export const moveToGraveyard: ActionMethod = async (_gameId, _seat, metadata) =>
 export const moveToHand: ActionMethod = async (_gameId, _seat, metadata) => {
 	// Move card back to hand from graveyard or exile
 	const objectId = metadata.objectId;
-	const checkToken = await query<{ is_token: boolean }>(`SELECT is_token FROM game_objects WHERE id = $1`, [objectId]);
-
-	if (checkToken?.rows?.[0]?.is_token) {
+	const isToken = await checkToken(objectId);
+	if (isToken) {
 		// Delete token
-		await query(`DELETE FROM game_objects WHERE id = $1`, [objectId]);
+		await GameObjectsStore().deleteToken(objectId);
 	} else {
 		if (objectId) {
-			await query(`UPDATE game_objects SET zone = 'hand' WHERE id = $1`, [objectId]);
+			await GameObjectsStore().moveToHand(objectId);
 		}
 	}
 };

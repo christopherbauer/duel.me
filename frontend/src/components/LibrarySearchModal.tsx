@@ -1,31 +1,11 @@
-import React, { useState } from 'react';
-
-interface Card {
-	id: string;
-	cmc: string | null;
-	color_identity: string[] | null;
-	colors: string[] | null;
-	keywords: string[] | null;
-	layout: string | null;
-	mana_cost: string | null;
-	oracle_text: string | null;
-	power: string | null;
-	toughness: string | null;
-	type_line: string;
-	card?: {
-		name: string;
-		image_uris?: {
-			normal: string;
-		};
-	};
-}
+import React, { useMemo, useState } from 'react';
+import { Card, GameStateObjects } from '../store';
 
 interface LibrarySearchModalProps {
-	cards: Card[];
+	gameStateObjects: GameStateObjects[];
 	onClose: () => void;
 	onCloseAndShuffle: () => void;
 	onMoveCard: (cardId: string, zone: 'hand' | 'library' | 'graveyard' | 'exile') => void;
-	onContextMenu?: (e: React.MouseEvent, cardId: string) => void;
 }
 
 interface ContextMenu {
@@ -34,16 +14,18 @@ interface ContextMenu {
 	cardId: string;
 }
 
-export const LibrarySearchModal: React.FC<LibrarySearchModalProps> = ({ cards, onClose, onCloseAndShuffle, onMoveCard, onContextMenu }) => {
+export const LibrarySearchModal: React.FC<LibrarySearchModalProps> = ({ gameStateObjects, onClose, onCloseAndShuffle, onMoveCard }) => {
 	const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
 	const [searchTerm, setSearchTerm] = useState('');
-	console.log(cards);
 
-	const filteredCards = cards.filter((card) => {
-		if (!searchTerm) return true;
-		const cardName = card.card?.name || '';
-		return (cardName + card.type_line).toLowerCase().includes(searchTerm.toLowerCase());
-	});
+	const filteredCards = useMemo(
+		() =>
+			gameStateObjects.filter((gameStateObject) => {
+				if (!searchTerm) return true;
+				return (gameStateObject?.card?.name + gameStateObject?.card?.type_line).toLowerCase().includes(searchTerm.toLowerCase());
+			}),
+		[searchTerm, gameStateObjects]
+	);
 
 	const handleCardContextMenu = (e: React.MouseEvent, cardId: string) => {
 		e.preventDefault();
@@ -81,17 +63,17 @@ export const LibrarySearchModal: React.FC<LibrarySearchModalProps> = ({ cards, o
 
 				<div style={styles.cardsGrid}>
 					{filteredCards.length > 0 ? (
-						filteredCards.map((card) => (
+						filteredCards.map((card, i) => (
 							<div
-								key={card.id}
+								key={`${card.id}-${i}`}
 								style={styles.cardWrapper}
 								onContextMenu={(e) => handleCardContextMenu(e, card.id)}
-								title={card.card?.name || 'Unknown'}
+								title={card.card.name || 'Unknown'}
 							>
-								{card.card?.image_uris?.normal ? (
+								{card.card.image_uris?.normal ? (
 									<img src={card.card.image_uris.normal} style={styles.cardImage} alt={card.card.name || 'Card'} />
 								) : (
-									<div style={styles.cardPlaceholder}>{card.card?.name || 'Unknown'}</div>
+									<div style={styles.cardPlaceholder}>{card.card.name || 'Unknown'}</div>
 								)}
 							</div>
 						))
