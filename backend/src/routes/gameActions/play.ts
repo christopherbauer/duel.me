@@ -56,3 +56,15 @@ export const moveToHand: ActionMethod = async (_gameId, _seat, metadata) => {
 		}
 	}
 };
+
+export const cast: ActionMethod = async (_gameId, _seat, metadata) => {
+	// Move card from command zone to battlefield (put into play)
+	const objectId = metadata.objectId;
+	if (objectId) {
+		const position = metadata.position || { x: 100, y: 100 };
+		await query(`UPDATE game_objects SET zone = 'battlefield', position = $1 WHERE id = $2`, [
+			JSON.stringify({ x: position.x, y: position.y }),
+			objectId,
+		]);
+	}
+};

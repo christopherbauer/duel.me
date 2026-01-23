@@ -110,7 +110,10 @@ export const useGameStore = create<GameStore>((set) => ({
 
 	setCurrentGame: (gameId: string) => set({ currentGameId: gameId }),
 	setViewerSeat: (seat: 1 | 2) => set({ viewerSeat: seat }),
-	setGameState: (state: GameState) => set({ gameState: state }),
+	setGameState: (state: GameState) => {
+		set({ gameState: state });
+		set({ viewerSeat: state.active_seat });
+	},
 	setAvailableTokens: (tokens: Card[]) => set({ availableTokens: tokens }),
 	setAvailableComponents: (components: Card[]) => set({ availableComponents: components }),
 	clearGame: () =>

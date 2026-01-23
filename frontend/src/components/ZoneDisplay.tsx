@@ -1,13 +1,13 @@
 import { useState } from 'react';
+import { ActionMethod } from '../types';
 
 interface ZoneDisplayProps {
 	zone: string;
 	label: string;
 	objects: any[];
 	redacted: boolean;
-	onCardDragStart?: (cardId: string) => void;
-	onCountClick?: () => void;
 	showBreakdown?: boolean;
+	seat: number;
 	typeBreakdown?: {
 		creatures: number;
 		instants: number;
@@ -15,67 +15,39 @@ interface ZoneDisplayProps {
 		lands: number;
 		other: number;
 	};
+	onCardDragStart?: (cardId: string) => void;
+	onCountClick?: () => void;
 	onContextMenu?: (e: React.MouseEvent, objectId?: string) => void;
 	onExileModalOpen?: (cards: any[]) => void;
 	onGraveyardModalOpen?: (cards: any[]) => void;
+	onGameAction: ActionMethod;
 }
 
-const getCardsByType: (objects: any[]) => {
-	creatures: number;
-	instants: number;
-	sorceries: number;
-	lands: number;
-	other: number;
-} = (objects) => {
-	return {
-		creatures: objects.filter((o) => {
-			const type = o.card && o.card.type_line;
-			return type && type.toLowerCase().includes('creature');
-		}).length,
-		instants: objects.filter((o) => {
-			const type = o.card && o.card.type_line;
-			return type && type.toLowerCase().includes('instant');
-		}).length,
-		sorceries: objects.filter((o) => {
-			const type = o.card && o.card.type_line;
-			return type && type.toLowerCase().includes('sorcery');
-		}).length,
-		lands: objects.filter((o) => {
-			const type = o.card && o.card.type_line;
-			return type && type.toLowerCase().includes('land');
-		}).length,
-		other: objects.filter((o) => {
-			const type = o.card && o.card.type_line;
-			return (
-				type &&
-				!type.toLowerCase().includes('creature') &&
-				!type.toLowerCase().includes('instant') &&
-				!type.toLowerCase().includes('sorcery') &&
-				!type.toLowerCase().includes('land')
-			);
-		}).length,
-	};
-};
 export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 	zone,
 	label,
 	objects,
 	redacted,
+	showBreakdown,
+	seat,
 	onCardDragStart,
 	onCountClick,
-	showBreakdown,
 	onContextMenu,
 	onExileModalOpen,
 	onGraveyardModalOpen,
+	onGameAction,
 }) => {
 	const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
 	const count = objects.length;
 	const typeBreakdown = getCardsByType(objects.filter((o) => o.zone === zone));
 
+	const handleLibraryDoubleClick = () => onGameAction('draw', seat, { count: 1 });
+
 	// Library zone shows a card back instead of individual cards
 	const isLibrary = zone === 'library';
 	const isGraveyard = zone === 'graveyard';
 	const isExile = zone === 'exile';
+	const isCommandZone = zone === 'command_zone';
 	const isHand = zone === 'hand';
 
 	return (
@@ -123,9 +95,11 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 									e.preventDefault();
 									if (onContextMenu) onContextMenu(e);
 								}}
-								onClick={onCountClick}
+								onDoubleClick={handleLibraryDoubleClick}
 							>
-								<div style={zoneStyles.libraryCardLabel}>{count} cards</div>
+								<div style={zoneStyles.libraryCardLabel} onClick={onCountClick}>
+									{count} cards
+								</div>
 							</div>
 						</div>
 					) : (
@@ -231,6 +205,57 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 					)
 				) : redacted ? (
 					<div style={zoneStyles.redactedCount}>{count} card(s)</div>
+				) : isCommandZone ? (
+					// Command zone displays the commander card prominently
+					count > 0 ? (
+						<div
+							style={{
+								display: 'flex',
+								flexDirection: 'column',
+								alignItems: 'center',
+								gap: '6px',
+								flex: 1,
+								justifyContent: 'center',
+							}}
+						>
+							{objects.map((obj) => {
+								const imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
+								return (
+									<div
+										key={obj.id}
+										style={{
+											...zoneStyles.handCard,
+											borderRadius: '4px',
+											cursor: 'pointer',
+											boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
+										}}
+										onContextMenu={(e) => {
+											e.preventDefault();
+											if (onContextMenu) onContextMenu(e, obj.id);
+										}}
+										title={obj.card ? obj.card.name : 'Unknown'}
+									>
+										{imageUrl ? (
+											<img
+												src={imageUrl}
+												alt={obj.card ? obj.card.name : 'Unknown'}
+												style={{
+													width: '100%',
+													height: '100%',
+													borderRadius: '4px',
+													objectFit: 'cover',
+												}}
+											/>
+										) : (
+											<div style={zoneStyles.cardPlaceholder}>{obj.card ? obj.card.name : 'Unknown'}</div>
+										)}
+									</div>
+								);
+							})}
+						</div>
+					) : (
+						<div style={zoneStyles.emptyZone}>Empty</div>
+					)
 				) : isHand ? (
 					// Hand displays cards horizontally with hover enlargement
 					count > 0 ? (
@@ -479,4 +504,56 @@ export const zoneStyles = {
 		overflow: 'hidden' as const,
 		backgroundColor: '#0a0a0a',
 	},
+};
+
+const getCardsByType: (objects: any[]) => {
+	creatures: number;
+	instants: number;
+	sorceries: number;
+	lands: number;
+	other: number;
+} = (objects) => {
+	let creatures = 0;
+	let instants = 0;
+	let sorceries = 0;
+	let lands = 0;
+	let other = 0;
+
+	for (const o of objects) {
+		const typeLine = o.card && o.card.type_line;
+		if (!typeLine) {
+			continue;
+		}
+
+		const type = String(typeLine).toLowerCase();
+		const isCreature = type.includes('creature');
+		const isInstant = type.includes('instant');
+		const isSorcery = type.includes('sorcery');
+		const isLand = type.includes('land');
+
+		if (isCreature) {
+			creatures += 1;
+		}
+		if (isInstant) {
+			instants += 1;
+		}
+		if (isSorcery) {
+			sorceries += 1;
+		}
+		if (isLand) {
+			lands += 1;
+		}
+
+		if (!isCreature && !isInstant && !isSorcery && !isLand) {
+			other += 1;
+		}
+	}
+
+	return {
+		creatures,
+		instants,
+		sorceries,
+		lands,
+		other,
+	};
 };

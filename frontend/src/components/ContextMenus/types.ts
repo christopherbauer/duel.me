@@ -3,6 +3,7 @@ export enum ContextMenuType {
 	Hand = 'hand',
 	Graveyard = 'graveyard',
 	Exile = 'exile',
+	CommandZone = 'command_zone',
 	Battlefield = 'battlefield',
 }
 

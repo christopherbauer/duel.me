@@ -2,7 +2,14 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useGameStore, Card } from '../../store';
 import { ActionMethod } from '../../types';
 import { ContextMenuType, MenuItem } from './types';
-import { libraryMenuItems, handMenuItems, exileMenuItems, battlefieldMenuItems, graveyardMenuItems } from './MenuItems';
+import {
+	libraryMenuItems,
+	handMenuItems,
+	exileMenuItems,
+	commandZoneMenuItems,
+	battlefieldMenuItems,
+	graveyardMenuItems,
+} from './MenuItems';
 
 // Custom hook for managing submenu timeout behavior
 const useSubmenuTimeout = () => {
@@ -35,6 +42,7 @@ const typeToMenuItemsMap: (
 	[ContextMenuType.Hand]: handMenuItems(objectId),
 	[ContextMenuType.Graveyard]: graveyardMenuItems(objectId),
 	[ContextMenuType.Exile]: exileMenuItems(objectId),
+	[ContextMenuType.CommandZone]: commandZoneMenuItems(objectId),
 	[ContextMenuType.Battlefield]: objectId
 		? battlefieldMenuItems(objectId)
 		: backgroundTokenMenuItems(availableTokens, availableComponents, position),
@@ -42,7 +50,7 @@ const typeToMenuItemsMap: (
 interface ContextMenuProps {
 	x: number;
 	y: number;
-	type: 'library' | 'hand' | 'graveyard' | 'exile' | 'battlefield';
+	type: 'library' | 'hand' | 'graveyard' | 'exile' | 'command_zone' | 'battlefield';
 	objectId?: string;
 	onClose: () => void;
 	executeAction: ActionMethod;
@@ -533,7 +541,15 @@ const backgroundTokenMenuItems = (
 		items.push({
 			label: 'Create Token',
 			submenu: availableTokens.map((token) => {
-				const displayLabel = token.power && token.toughness ? `${token.name} - ${token.power}/${token.toughness}` : token.name;
+				const displayLabel =
+					token.power && token.toughness
+						? [
+								`${token.name} - ${token.power}/${token.toughness} ${token.colors.join('/')} ${token.type_line}`,
+								token.oracle_text?.length > 0 ? token.oracle_text : undefined,
+							]
+								.filter(Boolean)
+								.join(' - ')
+						: token.name;
 
 				return {
 					label: displayLabel,

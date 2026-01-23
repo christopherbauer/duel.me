@@ -77,6 +77,13 @@ export const exileMenuItems = (objectId?: string): MenuItem[] => [
 		metadata: { objectId },
 	},
 ];
+export const commandZoneMenuItems = (objectId?: string): MenuItem[] => [
+	{
+		label: 'Cast',
+		action: 'cast',
+		metadata: { objectId },
+	},
+];
 export const battlefieldMenuItems = (objectId?: string): MenuItem[] => {
 	// Get counters for this object from the store
 	const gameState = useGameStore.getState().gameState;
