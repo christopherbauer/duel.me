@@ -5,6 +5,7 @@ import { exileTopFromLibrary, moveToExile } from './exile';
 import { moveToBattlefield, moveToGraveyard, moveToHand, cast } from './play';
 import { createTokenCopy, removeToken } from './tokens';
 import { createIndicator, moveIndicator, deleteIndicator } from './indicators';
+import { endTurn } from './endTurn';
 import { ActionMethod } from './types';
 import { query } from '../../core/pool';
 import { addCounter, removeCounter } from './counters';
@@ -34,6 +35,7 @@ enum Actions {
 	move_indicator,
 	delete_indicator,
 	cast,
+	end_turn,
 }
 
 const actionMap: Record<keyof typeof Actions, ActionMethod> = {
@@ -61,6 +63,7 @@ const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	move_indicator: moveIndicator,
 	delete_indicator: deleteIndicator,
 	cast: cast,
+	end_turn: endTurn,
 };
 export const handleGameAction = async (action: keyof typeof Actions, gameId: string, seat: number, metadata: any) => {
 	console.log(`handleGameAction called with action: ${String(action)}`);

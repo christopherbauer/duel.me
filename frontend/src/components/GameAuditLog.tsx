@@ -41,6 +41,7 @@ const actionTypeLabels: Record<string, string> = {
 	delete_indicator: 'Delete Indicator',
 	cast: 'Cast',
 	search_library: 'Search Library',
+	end_turn: 'Ended Turn',
 };
 
 const formatActionSummary = (action: GameAction): string => {

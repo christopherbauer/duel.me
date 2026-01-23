@@ -15,6 +15,7 @@ import { ActionMethod } from '../types';
 export const GameBoard: React.FC = () => {
 	const { gameId } = useParams<{ gameId: string }>();
 	const { viewerSeat, setViewerSeat, gameState, setGameState } = useGameStore();
+	console.log('🎮 GameBoard rendering with active_seat:', gameState?.active_seat, 'turn_number:', gameState?.turn_number);
 	const [draggedCard, setDraggedCard] = useState<string | null>(null);
 	const [dragStart, setDragStart] = useState<{
 		cardId: string;
@@ -60,6 +61,9 @@ export const GameBoard: React.FC = () => {
 		if (!gameId) return;
 		try {
 			const response = await api.getGame(gameId, viewerSeat);
+			console.log('Game state loaded:', response.data);
+			console.log('Active seat:', response.data.active_seat);
+			console.log('Turn number:', response.data.turn_number);
 			setGameState(response.data);
 		} catch (err) {
 			console.error('Failed to load game state:', err);
@@ -203,11 +207,13 @@ export const GameBoard: React.FC = () => {
 			}
 
 			try {
+				console.log('Executing action:', action, 'with metadata:', metadata);
 				await api.executeAction(gameId, {
 					seat: seat || viewerSeat,
 					action_type: action,
 					metadata,
 				});
+				console.log('Action completed, loading game state...');
 
 				// Track card movements to battlefield
 				if ((action === 'move_to_battlefield' || action === 'cast') && metadata?.objectId) {
@@ -215,6 +221,7 @@ export const GameBoard: React.FC = () => {
 				}
 
 				await loadGameState();
+				console.log('Game state loaded after action');
 			} catch (err) {
 				console.error('Action failed:', err);
 			}
@@ -763,6 +770,16 @@ export const GameBoard: React.FC = () => {
 			{gameId && <GameAuditLog gameId={gameId} isOpen={showAuditLog} onClose={() => setShowAuditLog(false)} />}
 
 			<div style={styles.turnInfo}>
+				{(() => {
+					const storeState = useGameStore.getState();
+					const seat = gameState?.active_seat;
+					const turn = gameState?.turn_number;
+					console.log('📊 Zustand store active_seat:', storeState.gameState?.active_seat);
+					console.log('📊 Component gameState active_seat:', gameState?.active_seat);
+					console.log('📊 Local variables - seat:', seat, 'turn:', turn);
+					console.log('📊 RENDERING TEXT: Turn ' + turn + ' • Active: Seat ' + seat);
+					return '';
+				})() || ''}
 				Turn {gameState.turn_number} • Active: Seat {gameState.active_seat}
 			</div>
 		</div>
