@@ -3,7 +3,7 @@ import { query } from '../core/pool';
 import { v4 as uuidv4 } from 'uuid';
 import { GameSession, GameStateView, DeckCards, CommanderIds, Card, Indicator } from '../types/game';
 import logger from '../core/logger';
-import { handleGameAction } from './gameActions';
+import { Actions, handleGameAction } from './gameActions';
 import GamesStore from '../db/GamesStore';
 import GameStateStore from '../db/GameStateStore';
 import { AllPartsQueryResult } from '../db/types';
@@ -87,8 +87,8 @@ const initializeGame = async (gameId: string, deck1_id: string, deck2_id: string
 				);
 			}
 		}
-		await shuffleLibrary(gameId, seat, {});
-		await drawFromLibrary(gameId, seat, { count: 7 });
+		await handleGameAction(Actions.untap_all, gameId, seat, {});
+		await handleGameAction(Actions.draw, gameId, seat, { count: 7 });
 	}
 };
 
@@ -301,8 +301,6 @@ router.get('/:id', async (req, res) => {
  *               action_type:
  *                 type: string
  *                 enum: [draw, shuffle, tap, untap, counter_add, counter_remove, move, life_change]
- *               target_object_id:
- *                 type: string
  *               metadata:
  *                 type: object
  *     responses:
@@ -311,7 +309,7 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/:id/action', async (req: Request, res: Response) => {
 	const { id } = req.params;
-	const { seat, action_type, target_object_id, metadata = {} } = req.body;
+	const { seat, action_type, metadata = {} } = req.body;
 
 	if (!seat || !action_type) {
 		return res.status(400).json({ error: 'seat and action_type are required' });
@@ -320,16 +318,7 @@ router.post('/:id/action', async (req: Request, res: Response) => {
 	logger.info(`Received action: ${action_type} with metadata: ${JSON.stringify(metadata)}`);
 
 	try {
-		const actionId = uuidv4();
-
-		// Log action
-		await query(
-			`INSERT INTO game_actions (id, game_session_id, seat, action_type, target_object_id, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-			[actionId, id, seat, action_type, target_object_id || null, JSON.stringify(metadata)]
-		);
-
-		await handleGameAction(action_type, id, seat, metadata);
+		const actionId = await handleGameAction(action_type, id, seat, metadata);
 
 		res.json({ success: true, action_id: actionId });
 	} catch (error) {

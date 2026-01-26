@@ -1,8 +1,7 @@
 import { query } from '../../core/pool';
-import { untapAll } from './tap';
 import { ActionMethod } from './types';
 import logger from '../../core/logger';
-import { drawFromLibrary } from './library';
+import { Actions, handleGameAction } from '.';
 
 export const endTurn: ActionMethod = async (gameId, _seat, _metadata) => {
 	// Get current game state to determine next player
@@ -36,6 +35,6 @@ export const endTurn: ActionMethod = async (gameId, _seat, _metadata) => {
 	);
 	logger.info(`Verified: active_seat=${verifyResult?.rows[0]?.active_seat}, turn_number=${verifyResult?.rows[0]?.turn_number}`);
 
-	await untapAll(gameId, nextSeat, {});
-	await drawFromLibrary(gameId, nextSeat, { count: 1 });
+	await handleGameAction(Actions.untap_all, gameId, nextSeat, {});
+	await handleGameAction(Actions.draw, gameId, nextSeat, { count: 1 });
 };
