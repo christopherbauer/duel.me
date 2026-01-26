@@ -76,6 +76,7 @@ const initializeGame = async (gameId: string, deck1_id: string, deck2_id: string
 				libraryOrder++;
 			}
 		}
+		await handleGameAction(Actions.shuffle_library, gameId, seat, {});
 
 		// Load commanders into command zone
 		if (commandersByDeck[seat] && commandersByDeck[seat].length > 0) {
@@ -87,7 +88,6 @@ const initializeGame = async (gameId: string, deck1_id: string, deck2_id: string
 				);
 			}
 		}
-		await handleGameAction(Actions.untap_all, gameId, seat, {});
 		await handleGameAction(Actions.draw, gameId, seat, { count: 7 });
 	}
 };
