@@ -35,7 +35,7 @@ export const removeCounter: ActionMethod = async (_gameId, seat, metadata: Metad
 		delete counters[counterType];
 	}
 	await query(`UPDATE game_objects SET counters = $1 WHERE id = $2`, [
-		Object.keys(counters).length ? JSON.stringify(counters) : null,
+		Object.keys(counters).length ? JSON.stringify(counters) : JSON.stringify({}),
 		objectId,
 	]);
 };

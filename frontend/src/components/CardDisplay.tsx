@@ -36,17 +36,19 @@ export const CardDisplay: React.FC<CardDisplayProps> = ({
 	const cardHeight = useFixedDimensions ? 170 * scale : undefined;
 
 	// Counter display configuration
-	const counterDisplay = [
-		{ type: 'plus_one_plus_one', label: '+1/+1', color: '#00ff00' },
-		{ type: 'minus_one_minus_one', label: '-1/-1', color: '#ff0000' },
-		{ type: 'charge', label: '⚡', color: '#ffff00' },
-		{ type: 'generic', label: '◆', color: '#cccccc' },
-	]
-		.filter((counter) => counters && counters[counter.type as keyof Counters] && counters[counter.type as keyof Counters]! > 0)
-		.map((counter) => ({
-			...counter,
-			count: counters![counter.type as keyof Counters]!,
-		}));
+	const counterDisplay = counters
+		? [
+				{ type: 'plus_one_plus_one', label: '+1/+1', color: '#00ff00' },
+				{ type: 'minus_one_minus_one', label: '-1/-1', color: '#ff0000' },
+				{ type: 'charge', label: '⚡', color: '#ffff00' },
+				{ type: 'generic', label: '◆', color: '#cccccc' },
+			]
+				.filter((counter) => (counters[counter.type as keyof Counters] ?? 0) > 0)
+				.map((counter) => ({
+					...counter,
+					count: counters[counter.type as keyof Counters]!,
+				}))
+		: [];
 
 	const containerStyle: React.CSSProperties = {
 		position: 'relative',
