@@ -40,10 +40,16 @@ const GamesStore = () => {
 		);
 		return indicatorsResult?.rows || [];
 	};
+	const endGameSession = async (id: string) => {
+		const result = await query(`UPDATE game_sessions SET status = 'completed', completed_at = NOW() WHERE id = $1 RETURNING *`, [id]);
+		return result;
+	};
+
 	return {
 		getGamesObjects,
 		getAllParts,
 		getIndicators,
+		endGameSession,
 	};
 };
 export default GamesStore;

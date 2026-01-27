@@ -494,4 +494,36 @@ router.get('/:id/actions', async (req, res) => {
 	}
 });
 
+/**
+ * @swagger
+ * /api/games/:id/end:
+ *   post:
+ *     summary: End a game session
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Game ended successfully
+ *       404:
+ *         description: Game not found
+ */
+router.post('/:id/end', async (req, res) => {
+	try {
+		const { id } = req.params;
+		const result = await GamesStore().endGameSession(id);
+		if (!result || result.rows.length === 0) {
+			throw new NotFoundError();
+		}
+
+		res.json(result.rows[0]);
+	} catch (error) {
+		logger.error(JSON.stringify(error));
+		res.status(500).json({ error: 'Failed to end game' });
+	}
+});
+
 export default router;

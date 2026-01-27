@@ -34,4 +34,5 @@ export const api = {
 		}),
 	executeAction: (gameId: string, payload: any) => client.post(`/games/${gameId}/action`, payload),
 	restartGame: (gameId: string) => client.post(`/games/${gameId}/restart`),
+	endGame: (gameId: string) => client.post(`/games/${gameId}/end`),
 };
