@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../api';
+import { Card, GameStateObjects, useGameStore } from '../store';
 
 interface GameAction {
 	id: string;
@@ -7,12 +8,6 @@ interface GameAction {
 	action_type: string;
 	metadata?: Record<string, any>;
 	created_at: string;
-}
-
-interface GameAuditLogProps {
-	gameId: string;
-	isOpen: boolean;
-	onClose: () => void;
 }
 
 const actionTypeLabels: Record<string, string> = {
@@ -65,13 +60,16 @@ const formatActionSummary = (action: GameAction): string => {
 		details = ` x${metadata.quantity}`;
 	} else if (action.action_type === 'create_indicator' && metadata.color) {
 		details = ` (${metadata.color})`;
-	} else if (action.action_type === 'end_turn') {
-		details = 'End Turn';
 	}
 
-	return `${label}${details}`;
+	return `${label} ${details}`;
 };
 
+interface GameAuditLogProps {
+	gameId: string;
+	isOpen: boolean;
+	onClose: () => void;
+}
 export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onClose }) => {
 	const [actions, setActions] = useState<GameAction[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -80,8 +78,20 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 	const [page, setPage] = useState(1);
 	const [total, setTotal] = useState(0);
 	const [limit] = useState(50);
+	const [actionFilters, setActionFilters] = useState<Record<string, boolean>>(() => {
+		// Initialize with defaults - only end_turn, cast, tap, and draw visible
+		const filters: Record<string, boolean> = {};
+		Object.keys(actionTypeLabels).forEach((action) => {
+			filters[action] = ['end_turn', 'cast', 'tap', 'untap_all', 'draw'].includes(action);
+		});
+		return filters;
+	});
+	const { gameState } = useGameStore();
 	const logContainerRef = React.useRef<HTMLDivElement>(null);
 
+	const gameObjects = useMemo(() => {
+		return gameState?.objects || [];
+	}, [gameState]);
 	const loadAuditLog = useCallback(
 		async (pageNum: number, reset: boolean = false) => {
 			setLoading(true);
@@ -126,6 +136,33 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 		}
 	};
 
+	const cardRecords: Record<string, GameStateObjects> = useMemo(() => {
+		const records: Record<string, GameStateObjects> = {};
+		const filteredGameObjects = gameObjects.filter((obj) => obj.card);
+		for (const gameObject of filteredGameObjects) {
+			records[gameObject.id] = gameObject;
+		}
+		return records;
+	}, [gameObjects]);
+
+	const filteredActions = useMemo(() => {
+		return actions.filter((action) => actionFilters[action.action_type]);
+	}, [actions, actionFilters]);
+
+	const toggleFilter = (actionType: string) => {
+		setActionFilters((prev) => ({
+			...prev,
+			[actionType]: !prev[actionType],
+		}));
+	};
+
+	const toggleAllFilters = (visible: boolean) => {
+		const newFilters: Record<string, boolean> = {};
+		Object.keys(actionTypeLabels).forEach((action) => {
+			newFilters[action] = visible;
+		});
+		setActionFilters(newFilters);
+	};
 	if (!isOpen) {
 		return null;
 	}
@@ -152,17 +189,50 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 
 				{error && <div style={styles.error}>{error}</div>}
 
+				<div style={styles.filterBar}>
+					<div style={styles.filterControls}>
+						<button onClick={() => toggleAllFilters(true)} style={styles.filterButton}>
+							Show All
+						</button>
+						<button onClick={() => toggleAllFilters(false)} style={styles.filterButton}>
+							Clear All
+						</button>
+					</div>
+					<div style={styles.filterChips}>
+						{Object.entries(actionTypeLabels).map(([actionType, label]) => (
+							<button
+								key={actionType}
+								onClick={() => toggleFilter(actionType)}
+								style={{
+									...styles.filterChip,
+									...(actionFilters[actionType] ? styles.filterChipActive : styles.filterChipInactive),
+								}}
+							>
+								{label}
+							</button>
+						))}
+					</div>
+				</div>
+
 				<div style={styles.logContainer} ref={logContainerRef} onScroll={handleScroll}>
-					{actions.length === 0 && !loading ? (
-						<div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>No actions recorded yet</div>
+					{filteredActions.length === 0 && !loading ? (
+						<div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+							{actions.length === 0 ? 'No actions recorded yet' : 'No actions match selected filters'}
+						</div>
 					) : (
 						<div style={styles.actionsList}>
-							{actions.map((action) => (
+							{filteredActions.map((action) => (
 								<div key={action.id} style={styles.actionItem}>
 									<div style={styles.actionTime}>{new Date(action.created_at).toLocaleTimeString()}</div>
 									<div style={styles.actionContent}>
 										<span style={styles.actionSeat}>Seat {action.seat}</span>
-										<span style={styles.actionSummary}>{formatActionSummary(action)}</span>
+										<span style={styles.actionSummary}>
+											<span style={{ fontWeight: 'bold' }}>
+												{[formatActionSummary(action), action?.metadata?.objectId && cardRecords[action?.metadata?.objectId]?.card?.name]
+													.filter(Boolean)
+													.join(' ')}
+											</span>
+										</span>
 									</div>
 								</div>
 							))}
@@ -172,7 +242,9 @@ export const GameAuditLog: React.FC<GameAuditLogProps> = ({ gameId, isOpen, onCl
 				</div>
 
 				<div style={styles.footer}>
-					<small style={{ color: '#666' }}>Total actions: {total}</small>
+					<small style={{ color: '#666' }}>
+						Showing {filteredActions.length} of {total} actions
+					</small>
 				</div>
 			</div>
 		</div>
@@ -217,6 +289,56 @@ const styles: Record<string, React.CSSProperties> = {
 		backgroundColor: '#330000',
 		borderRadius: '4px',
 		margin: '10px 20px 0 20px',
+	},
+	filterBar: {
+		padding: '15px 20px',
+		borderBottom: '1px solid #444',
+		display: 'flex' as const,
+		flexDirection: 'column' as const,
+		gap: '10px',
+		backgroundColor: '#1a1a1a',
+	},
+	filterControls: {
+		display: 'flex' as const,
+		gap: '8px',
+	},
+	filterButton: {
+		padding: '6px 12px',
+		backgroundColor: '#444',
+		color: '#ccc',
+		border: '1px solid #555',
+		borderRadius: '4px',
+		fontSize: '11px',
+		cursor: 'pointer',
+		fontWeight: 'bold' as const,
+		transition: 'all 0.2s',
+	},
+	filterChips: {
+		display: 'flex' as const,
+		flexWrap: 'wrap' as const,
+		gap: '6px',
+		maxHeight: '120px',
+		overflowY: 'auto' as const,
+	},
+	filterChip: {
+		padding: '4px 10px',
+		border: '1px solid #555',
+		borderRadius: '12px',
+		fontSize: '11px',
+		cursor: 'pointer',
+		fontWeight: '500' as const,
+		transition: 'all 0.2s',
+		whiteSpace: 'nowrap' as const,
+	},
+	filterChipActive: {
+		backgroundColor: '#0066ff',
+		color: '#fff',
+		borderColor: '#0066ff',
+	},
+	filterChipInactive: {
+		backgroundColor: '#333',
+		color: '#999',
+		borderColor: '#444',
 	},
 	logContainer: {
 		flex: 1,

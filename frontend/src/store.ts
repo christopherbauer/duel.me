@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Zone } from './types';
 
 export interface Indicator {
 	id: string;
@@ -10,10 +11,14 @@ export interface Indicator {
 export interface GameState {
 	game_session_id: string;
 	seat1_life: number;
-	seat2_life: number;
+	seat2_life?: number;
+	seat3_life?: number;
+	seat4_life?: number;
 	seat1_commander_damage: number;
-	seat2_commander_damage: number;
-	active_seat: 1 | 2;
+	seat2_commander_damage?: number;
+	seat3_commander_damage?: number;
+	seat4_commander_damage?: number;
+	active_seat: 1 | 2 | 3 | 4;
 	turn_number: number;
 	objects: GameStateObjects[];
 	indicators?: Indicator[];
@@ -43,6 +48,18 @@ export interface Card {
 	color_identity: string[];
 	keywords: string[];
 	layout: Layout;
+	image_uris?: ImageUris;
+	card_faces?: CardFace[];
+}
+export interface CardFace {
+	name: string;
+	mana_cost: string;
+	type_line: string;
+	oracle_text: string;
+	power?: string;
+	toughness?: string;
+	colors?: string[];
+	color_identity?: string[];
 	image_uris: ImageUris;
 }
 export interface ImageUris {
@@ -77,13 +94,6 @@ export interface Counters {
 export interface Position {
 	x: number;
 	y: number;
-}
-
-export enum Zone {
-	Battlefield = 'battlefield',
-	CommandZone = 'command_zone',
-	Library = 'library',
-	Exile = 'exile',
 }
 
 export interface GameStore {

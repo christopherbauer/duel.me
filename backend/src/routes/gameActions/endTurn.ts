@@ -1,8 +1,7 @@
 import { query } from '../../core/pool';
-import { untapAll } from './tap';
 import { ActionMethod } from './types';
 import logger from '../../core/logger';
-import { drawFromLibrary } from './library';
+import { Actions, handleGameAction } from '.';
 
 export const endTurn: ActionMethod = async (gameId, _seat, _metadata) => {
 	// Get current game state to determine next player
@@ -15,8 +14,15 @@ export const endTurn: ActionMethod = async (gameId, _seat, _metadata) => {
 		throw new Error('Game state not found');
 	}
 
+	// Get player count to determine seat rotation
+	const gameSessionResult = await query<{ player_count: number }>(
+		`SELECT COALESCE(player_count, 2) as player_count FROM game_sessions WHERE id = $1`,
+		[gameId]
+	);
+
+	const playerCount = gameSessionResult?.rows[0]?.player_count || 2;
 	const { active_seat, turn_number } = gameStateResult.rows[0];
-	const nextSeat = active_seat === 1 ? 2 : 1;
+	const nextSeat = active_seat === playerCount ? 1 : ((active_seat + 1) as 1 | 2 | 3 | 4);
 
 	logger.info(`End turn: changing from seat ${active_seat} to seat ${nextSeat}, turn ${turn_number} -> ${turn_number + 1}`);
 
@@ -36,6 +42,6 @@ export const endTurn: ActionMethod = async (gameId, _seat, _metadata) => {
 	);
 	logger.info(`Verified: active_seat=${verifyResult?.rows[0]?.active_seat}, turn_number=${verifyResult?.rows[0]?.turn_number}`);
 
-	await untapAll(gameId, nextSeat, {});
-	await drawFromLibrary(gameId, nextSeat, { count: 1 });
+	await handleGameAction(Actions.untap_all, gameId, nextSeat, {});
+	await handleGameAction(Actions.draw, gameId, nextSeat, { count: 1 });
 };

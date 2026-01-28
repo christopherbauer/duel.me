@@ -1,45 +1,10 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Link, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { DeckList } from './components/DeckList';
-import { DeckLoader } from './components/DeckLoader';
 import { GameSetup } from './components/GameSetup';
 import { GameBoard } from './components/GameBoard';
-
-function HomePage() {
-	return (
-		<div style={styles.homeContainer}>
-			<h1 style={styles.title}>duel.me</h1>
-			<p style={styles.subtitle}>Commander Duel Playtester v0</p>
-
-			<div style={styles.buttonGroup}>
-				<Link to="/decks">
-					<button style={styles.primaryButton}>Manage Decks</button>
-				</Link>
-				<Link to="/setup-game">
-					<button style={styles.primaryButton}>Start Game</button>
-				</Link>
-			</div>
-		</div>
-	);
-}
-
-function DeckDetailPage() {
-	const { deckId } = useParams<{ deckId: string }>();
-	const [updated, setUpdated] = React.useState(false);
-
-	const handleDeckUpdated = (id: string) => {
-		setUpdated(true);
-	};
-
-	return (
-		<div style={styles.container}>
-			<Link to="/decks">
-				<button style={styles.backButton}>← Back to Decks</button>
-			</Link>
-			<DeckLoader deckId={deckId} onDeckUpdated={handleDeckUpdated} />
-		</div>
-	);
-}
+import { HomePage } from './components/HomePage';
+import { DeckDetailPage } from './components/DeckDetailPage';
 
 function App() {
 	return (
@@ -89,38 +54,6 @@ const styles = {
 		minHeight: '100vh',
 		backgroundColor: '#1a1a1a',
 		color: '#fff',
-	},
-	homeContainer: {
-		display: 'flex',
-		flexDirection: 'column' as const,
-		justifyContent: 'center',
-		alignItems: 'center',
-		height: '100vh',
-	},
-	title: {
-		fontSize: '48px',
-		fontWeight: 'bold' as const,
-		marginBottom: '10px',
-	},
-	subtitle: {
-		fontSize: '18px',
-		color: '#999',
-		marginBottom: '40px',
-	},
-	buttonGroup: {
-		display: 'flex',
-		gap: '20px',
-	},
-	primaryButton: {
-		padding: '15px 30px',
-		fontSize: '16px',
-		fontWeight: 'bold' as const,
-		backgroundColor: '#0066ff',
-		color: '#fff',
-		border: 'none',
-		borderRadius: '8px',
-		cursor: 'pointer',
-		transition: 'background-color 0.3s',
 	},
 	container: {
 		padding: '20px',

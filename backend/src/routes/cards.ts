@@ -1,7 +1,8 @@
 import express, { Router } from 'express';
 import { query } from '../core/pool';
 import { v4 as uuidv4 } from 'uuid';
-import { Card } from '../types/game';
+import { Card, CardSearchResult } from '../types/game';
+import CardsStore from '../db/CardsStore';
 
 const router = Router();
 
@@ -40,14 +41,8 @@ router.get('/search', async (req, res) => {
 	}
 
 	try {
-		const result = await query(
-			`SELECT id, name, type_line, mana_cost, colors, image_uris 
-       FROM cards 
-       WHERE name ILIKE $1 
-       LIMIT $2`,
-			[`${q}%`, Math.min(parseInt(limit as string) || 20, 100)]
-		);
-		res.json(result?.rows);
+		const result = await CardsStore().getSearchResult(q, limit.toString());
+		res.json(result);
 	} catch (error) {
 		console.error('Card search error:', error);
 		res.status(500).json({ error: 'Card search failed' });
@@ -73,11 +68,11 @@ router.get('/:id', async (req, res) => {
 	const { id } = req.params;
 
 	try {
-		const result = await query('SELECT * FROM cards WHERE id = $1', [id]);
-		if (result && result.rows && result.rows.length === 0) {
+		const result = await CardsStore().getCard(id);
+		if (!result) {
 			return res.status(404).json({ error: 'Card not found' });
 		}
-		res.json(result?.rows[0]);
+		res.json(result);
 	} catch (error) {
 		console.error('Card fetch error:', error);
 		res.status(500).json({ error: 'Card fetch failed' });

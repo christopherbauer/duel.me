@@ -34,7 +34,8 @@ export interface ScryfallCard {
 	layout: string;
 	highres_image: boolean;
 	image_status: string;
-	image_uris: ImageUris;
+	image_uris?: ImageUris;
+	card_faces?: CardFace[];
 	mana_cost: string;
 	cmc: number;
 	type_line: string;
@@ -106,6 +107,19 @@ export interface ImageUris {
 	png: string;
 	art_crop: string;
 	border_crop: string;
+}
+
+export interface CardFace {
+	object: string;
+	name: string;
+	mana_cost: string;
+	type_line: string;
+	oracle_text: string;
+	power?: string;
+	toughness?: string;
+	colors?: string[];
+	color_identity?: string[];
+	image_uris: ImageUris;
 }
 
 export interface Legalities {

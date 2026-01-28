@@ -553,6 +553,12 @@ const backgroundTokenMenuItems = (
 
 				return {
 					label: displayLabel,
+					action: 'create_token_copy',
+					metadata: {
+						tokenCardId: token.id,
+						quantity: 1,
+						position,
+					},
 					submenu: [
 						{
 							label: '1',

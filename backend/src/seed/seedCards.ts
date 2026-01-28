@@ -151,7 +151,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 	// Using multi-row insert with ON CONFLICT for upsertion
 	const values = cards
 		.map((card, i) => {
-			const offset = i * 39;
+			const offset = i * 40;
 			return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}::jsonb, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${
 				offset + 8
 			}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15}, $${
@@ -164,7 +164,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 				offset + 30
 			}, $${offset + 31}::jsonb, $${offset + 32}::jsonb, $${offset + 33}::jsonb, $${offset + 34}, $${offset + 35}, $${offset + 36}, $${
 				offset + 37
-			}, $${offset + 38}, $${offset + 39})`;
+			}, $${offset + 38}, $${offset + 39}, $${offset + 40}::jsonb)`;
 		})
 		.join(',');
 
@@ -208,6 +208,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 		card.variation,
 		card.set,
 		card.rarity || null,
+		JSON.stringify(card.card_faces || []),
 	]);
 
 	const sql = `
@@ -217,7 +218,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
       image_status, image_uris, mana_cost, cmc, type_line, oracle_text, power,
       toughness, colors, color_identity, keywords, all_parts, legalities, games,
       reserved, game_changer, foil, nonfoil, finishes, oversized, promo, reprint,
-      variation, set, rarity
+      variation, set, rarity, card_faces
     )
     VALUES ${values}
     ON CONFLICT (id) DO UPDATE
@@ -233,6 +234,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
         color_identity = EXCLUDED.color_identity,
         keywords = EXCLUDED.keywords,
         image_uris = EXCLUDED.image_uris,
+        card_faces = EXCLUDED.card_faces,
         legalities = EXCLUDED.legalities,
         rarity = EXCLUDED.rarity,
         updated_at = NOW()

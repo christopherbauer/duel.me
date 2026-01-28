@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Card, GameStateObjects } from '../store';
+import { CardDisplay } from './CardDisplay';
 
 interface LibrarySearchModalProps {
 	gameStateObjects: GameStateObjects[];
@@ -70,11 +71,7 @@ export const LibrarySearchModal: React.FC<LibrarySearchModalProps> = ({ gameStat
 								onContextMenu={(e) => handleCardContextMenu(e, card.id)}
 								title={card.card.name || 'Unknown'}
 							>
-								{card.card.image_uris?.normal ? (
-									<img src={card.card.image_uris.normal} style={styles.cardImage} alt={card.card.name || 'Card'} />
-								) : (
-									<div style={styles.cardPlaceholder}>{card.card.name || 'Unknown'}</div>
-								)}
+								<CardDisplay card={card.card} style={{ height: '500px', width: '100%' }} />
 							</div>
 						))
 					) : (
@@ -197,27 +194,6 @@ const styles: Record<string, React.CSSProperties> = {
 		borderRadius: '4px',
 		border: '1px solid transparent',
 		transition: 'border-color 0.2s',
-	},
-	cardImage: {
-		width: '100%',
-		height: 'auto',
-		borderRadius: '4px',
-		display: 'block',
-	},
-	cardPlaceholder: {
-		width: '100%',
-		height: '195px',
-		backgroundColor: '#2a2a2a',
-		border: '1px solid #555',
-		borderRadius: '4px',
-		display: 'flex' as const,
-		alignItems: 'center' as const,
-		justifyContent: 'center' as const,
-		fontSize: '10px',
-		color: '#aaa',
-		textAlign: 'center' as const,
-		padding: '8px',
-		boxSizing: 'border-box' as const,
 	},
 	noResults: {
 		gridColumn: '1 / -1',
