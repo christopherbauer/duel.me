@@ -279,6 +279,7 @@ router.get('/:id', async (req, res) => {
 								keywords: obj.keywords,
 								layout: obj.layout,
 								image_uris: obj.image_uris,
+								card_faces: obj.card_faces,
 							}
 						: null,
 				is_token: obj.is_token,
@@ -291,6 +292,7 @@ router.get('/:id', async (req, res) => {
 			};
 		});
 		logger.debug(JSON.stringify(projectedObjects));
+
 		if (!projectedObjects) {
 			return res.status(500).json({ error: 'Failed to project game objects' });
 		}

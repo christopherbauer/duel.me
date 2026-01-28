@@ -48,6 +48,18 @@ export interface Card {
 	color_identity: string[];
 	keywords: string[];
 	layout: Layout;
+	image_uris?: ImageUris;
+	card_faces?: CardFace[];
+}
+export interface CardFace {
+	name: string;
+	mana_cost: string;
+	type_line: string;
+	oracle_text: string;
+	power?: string;
+	toughness?: string;
+	colors?: string[];
+	color_identity?: string[];
 	image_uris: ImageUris;
 }
 export interface ImageUris {

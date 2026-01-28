@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActionMethod } from '../types';
+import { CardDisplay } from './CardDisplay';
 
 interface ZoneDisplayProps {
 	zone: string;
@@ -118,7 +119,10 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 							{objects
 								.filter((o) => o.zone === zone)
 								.map((obj, idx) => {
-									const imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
+									let imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
+									if (!imageUrl && obj.card?.card_faces && obj.card.card_faces.length > 0) {
+										imageUrl = obj.card.card_faces[0]?.image_uris?.normal || null;
+									}
 									return (
 										<div
 											key={obj.id}
@@ -219,7 +223,10 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 							}}
 						>
 							{objects.map((obj) => {
-								const imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
+								let imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
+								if (!imageUrl && obj.card?.card_faces && obj.card.card_faces.length > 0) {
+									imageUrl = obj.card.card_faces[0]?.image_uris?.normal || null;
+								}
 								return (
 									<div
 										key={obj.id}
@@ -261,7 +268,10 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 					count > 0 ? (
 						<div style={zoneStyles.handContainer}>
 							{objects.map((obj, idx) => {
-								const imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
+								let imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
+								if (!imageUrl && obj.card?.card_faces && obj.card.card_faces.length > 0) {
+									imageUrl = obj.card.card_faces[0]?.image_uris?.normal || null;
+								}
 
 								// Bell curve scale calculation
 								let scale = 1;

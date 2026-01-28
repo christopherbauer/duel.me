@@ -4,8 +4,8 @@ export type CardId = Pick<Card, 'id'>;
 export type CommanderIds = Pick<Deck, 'commander_ids'>;
 export type DeckCards = Omit<DeckCard, 'deck_id' | 'zone'>;
 export type DeckDetails = Omit<DeckCard, 'deck_id' | 'card_id'> &
-	Pick<Card, 'id' | 'name' | 'type_line' | 'mana_cost' | 'colors' | 'image_uris'>;
-
+	Pick<Card, 'id' | 'name' | 'type_line' | 'mana_cost' | 'colors' | 'image_uris' | 'card_faces'>;
+export type CardSearchResult = Pick<Card, 'id' | 'name' | 'type_line' | 'mana_cost' | 'colors' | 'image_uris' | 'card_faces'>;
 export interface Card {
 	id: string;
 	name: string;
@@ -22,6 +22,30 @@ export interface Card {
 	image_uris?: Record<string, string>;
 	imported_at: string;
 	updated_at: string;
+	card_faces?: CardFaces[];
+}
+export interface CardFaces {
+	name: string;
+	artist: string;
+	colors: string[];
+	object: string;
+	artist_id: string;
+	mana_cost: string;
+	type_line: string;
+	image_uris: ImageUris;
+	oracle_text: string;
+	illustration_id: string;
+	flavor_text?: string;
+	color_indicator?: string[];
+}
+
+export interface ImageUris {
+	png: string;
+	large: string;
+	small: string;
+	normal: string;
+	art_crop: string;
+	border_crop: string;
 }
 
 export interface CardFace {

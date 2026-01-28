@@ -130,7 +130,7 @@ router.get('/:id', async (req, res) => {
 		}
 
 		const cardsResult = await query<DeckDetails>(
-			`SELECT dc.quantity, dc.zone, c.id, c.name, c.type_line, c.mana_cost, c.colors, c.image_uris
+			`SELECT dc.quantity, dc.zone, c.id, c.name, c.type_line, c.mana_cost, c.colors, c.image_uris, c.card_faces
        FROM deck_cards dc
        JOIN cards c ON dc.card_id = c.id
        WHERE dc.deck_id = $1

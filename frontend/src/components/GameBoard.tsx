@@ -65,6 +65,7 @@ export const GameBoard: React.FC = () => {
 		if (!gameId) return;
 		try {
 			const response = await api.getGame(gameId, viewerSeat);
+
 			setGameState(response.data);
 		} catch (err) {
 			console.error('Failed to load game state:', err);
