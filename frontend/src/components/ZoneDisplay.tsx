@@ -118,41 +118,23 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 						>
 							{objects
 								.filter((o) => o.zone === zone)
-								.map((obj, idx) => {
-									let imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
-									if (!imageUrl && obj.card?.card_faces && obj.card.card_faces.length > 0) {
-										imageUrl = obj.card.card_faces[0]?.image_uris?.normal || null;
-									}
-									return (
-										<div
-											key={obj.id}
-											style={{
-												...zoneStyles.stackedCard,
-												zIndex: idx,
-												transform: `translate(${idx * 2}px, ${idx * 7}px)`,
-											}}
-											onContextMenu={(e) => {
-												e.preventDefault();
-												if (onContextMenu) onContextMenu(e, obj.id);
-											}}
-											title={obj.card ? obj.card.name : 'Unknown'}
-										>
-											{imageUrl ? (
-												<img
-													src={imageUrl}
-													alt={obj.card ? obj.card.name : 'Unknown'}
-													style={{
-														width: '100%',
-														height: '100%',
-														borderRadius: '4px',
-													}}
-												/>
-											) : (
-												<div style={zoneStyles.cardPlaceholder}>{obj.card ? obj.card.name : 'Unknown'}</div>
-											)}
-										</div>
-									);
-								})}
+								.map((obj, idx) => (
+									<div
+										key={obj.id}
+										style={{
+											...zoneStyles.stackedCard,
+											zIndex: idx,
+											transform: `translate(${idx * 2}px, ${idx * 7}px)`,
+										}}
+										onContextMenu={(e) => {
+											e.preventDefault();
+											if (onContextMenu) onContextMenu(e, obj.id);
+										}}
+										title={obj.card ? obj.card.name : 'Unknown'}
+									>
+										<CardDisplay card={obj.card} compact />
+									</div>
+								))}
 						</div>
 					) : (
 						<div style={zoneStyles.emptyZone}>Empty</div>
@@ -222,43 +204,24 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 								justifyContent: 'center',
 							}}
 						>
-							{objects.map((obj) => {
-								let imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
-								if (!imageUrl && obj.card?.card_faces && obj.card.card_faces.length > 0) {
-									imageUrl = obj.card.card_faces[0]?.image_uris?.normal || null;
-								}
-								return (
-									<div
-										key={obj.id}
-										style={{
-											...zoneStyles.handCard,
-											borderRadius: '4px',
-											cursor: 'pointer',
-											boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
-										}}
-										onContextMenu={(e) => {
-											e.preventDefault();
-											if (onContextMenu) onContextMenu(e, obj.id);
-										}}
-										title={obj.card ? obj.card.name : 'Unknown'}
-									>
-										{imageUrl ? (
-											<img
-												src={imageUrl}
-												alt={obj.card ? obj.card.name : 'Unknown'}
-												style={{
-													width: '100%',
-													height: '100%',
-													borderRadius: '4px',
-													objectFit: 'cover',
-												}}
-											/>
-										) : (
-											<div style={zoneStyles.cardPlaceholder}>{obj.card ? obj.card.name : 'Unknown'}</div>
-										)}
-									</div>
-								);
-							})}
+							{objects.map((obj) => (
+								<div
+									key={obj.id}
+									style={{
+										...zoneStyles.handCard,
+										borderRadius: '4px',
+										cursor: 'pointer',
+										boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
+									}}
+									onContextMenu={(e) => {
+										e.preventDefault();
+										if (onContextMenu) onContextMenu(e, obj.id);
+									}}
+									title={obj.card ? obj.card.name : 'Unknown'}
+								>
+									<CardDisplay card={obj.card} compact />
+								</div>
+							))}
 						</div>
 					) : (
 						<div style={zoneStyles.emptyZone}>Empty</div>

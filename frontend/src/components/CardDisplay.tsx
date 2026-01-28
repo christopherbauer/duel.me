@@ -177,7 +177,7 @@ export const CardDisplay: React.FC<CardDisplayProps> = ({
 							style={{
 								padding: '2px 4px',
 								borderRadius: '3px',
-								fontSize: '9px',
+								fontSize: '1em',
 								fontWeight: 'bold',
 								color: '#000',
 								display: 'flex',
