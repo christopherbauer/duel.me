@@ -6,7 +6,10 @@ export interface CreateDeckRequest {
 }
 export interface CreateGameRequest {
 	deck1_id: string;
-	deck2_id: string;
+	deck2_id?: string;
+	deck3_id?: string;
+	deck4_id?: string;
+	player_count: 1 | 2 | 3 | 4;
 	name: string;
 }
 

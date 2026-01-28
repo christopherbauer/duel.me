@@ -11,10 +11,14 @@ export interface Indicator {
 export interface GameState {
 	game_session_id: string;
 	seat1_life: number;
-	seat2_life: number;
+	seat2_life?: number;
+	seat3_life?: number;
+	seat4_life?: number;
 	seat1_commander_damage: number;
-	seat2_commander_damage: number;
-	active_seat: 1 | 2;
+	seat2_commander_damage?: number;
+	seat3_commander_damage?: number;
+	seat4_commander_damage?: number;
+	active_seat: 1 | 2 | 3 | 4;
 	turn_number: number;
 	objects: GameStateObjects[];
 	indicators?: Indicator[];

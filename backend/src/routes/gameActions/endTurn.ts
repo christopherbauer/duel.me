@@ -14,8 +14,15 @@ export const endTurn: ActionMethod = async (gameId, _seat, _metadata) => {
 		throw new Error('Game state not found');
 	}
 
+	// Get player count to determine seat rotation
+	const gameSessionResult = await query<{ player_count: number }>(
+		`SELECT COALESCE(player_count, 2) as player_count FROM game_sessions WHERE id = $1`,
+		[gameId]
+	);
+
+	const playerCount = gameSessionResult?.rows[0]?.player_count || 2;
 	const { active_seat, turn_number } = gameStateResult.rows[0];
-	const nextSeat = active_seat === 1 ? 2 : 1;
+	const nextSeat = active_seat === playerCount ? 1 : ((active_seat + 1) as 1 | 2 | 3 | 4);
 
 	logger.info(`End turn: changing from seat ${active_seat} to seat ${nextSeat}, turn ${turn_number} -> ${turn_number + 1}`);
 

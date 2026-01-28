@@ -55,7 +55,10 @@ export interface GameSession {
 	name?: string;
 	status: 'active' | 'paused' | 'completed';
 	deck1_id: string;
-	deck2_id: string;
+	deck2_id?: string;
+	deck3_id?: string;
+	deck4_id?: string;
+	player_count?: number;
 	created_at: string;
 	updated_at: string;
 	completed_at?: string;
@@ -67,7 +70,7 @@ export type GameObjectId = Pick<GameObject, 'id'>;
 export interface GameObject {
 	id: string;
 	game_session_id: string;
-	seat: 1 | 2;
+	seat: 1 | 2 | 3 | 4;
 	zone: Zone;
 	card_id: string;
 	is_token: boolean;
@@ -86,10 +89,14 @@ export type Zone = 'library' | 'hand' | 'battlefield' | 'graveyard' | 'exile' | 
 export interface GameState {
 	game_session_id: string;
 	seat1_life: number;
-	seat2_life: number;
+	seat2_life?: number;
+	seat3_life?: number;
+	seat4_life?: number;
 	seat1_commander_damage: number;
-	seat2_commander_damage: number;
-	active_seat: 1 | 2;
+	seat2_commander_damage?: number;
+	seat3_commander_damage?: number;
+	seat4_commander_damage?: number;
+	active_seat: 1 | 2 | 3 | 4;
 	turn_number: number;
 	created_at: string;
 	updated_at: string;
@@ -98,7 +105,7 @@ export interface GameState {
 export interface GameAction {
 	id: string;
 	game_session_id: string;
-	seat: 1 | 2;
+	seat: 1 | 2 | 3 | 4;
 	action_type: string;
 	target_object_id?: string;
 	metadata?: Record<string, any>;
@@ -130,10 +137,14 @@ export interface Indicator {
 export interface GameStateView {
 	game_session_id: string;
 	seat1_life: number;
-	seat2_life: number;
+	seat2_life?: number;
+	seat3_life?: number;
+	seat4_life?: number;
 	seat1_commander_damage: number;
-	seat2_commander_damage: number;
-	active_seat: 1 | 2;
+	seat2_commander_damage?: number;
+	seat3_commander_damage?: number;
+	seat4_commander_damage?: number;
+	active_seat: 1 | 2 | 3 | 4;
 	turn_number: number;
 	// Zones are projected based on viewer seat
 	objects: GameObjectView[];
@@ -142,7 +153,7 @@ export interface GameStateView {
 
 export interface GameObjectView {
 	id: string;
-	seat: 1 | 2;
+	seat: 1 | 2 | 3 | 4;
 	zone: Zone;
 	card: Card | { id: string; name: string } | null; // Full card if public, minimal if hidden
 	is_tapped?: boolean;
