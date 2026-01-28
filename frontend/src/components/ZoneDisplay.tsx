@@ -268,11 +268,6 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 					count > 0 ? (
 						<div style={zoneStyles.handContainer}>
 							{objects.map((obj, idx) => {
-								let imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
-								if (!imageUrl && obj.card?.card_faces && obj.card.card_faces.length > 0) {
-									imageUrl = obj.card.card_faces[0]?.image_uris?.normal || null;
-								}
-
 								// Bell curve scale calculation
 								let scale = 1;
 								if (hoveredCardId === obj.id) {
@@ -308,21 +303,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 										}}
 										title={obj.card ? obj.card.name : 'Unknown'}
 									>
-										{imageUrl ? (
-											<img
-												src={imageUrl}
-												alt={obj.card ? obj.card.name : 'Unknown'}
-												style={{
-													width: '100%',
-													height: '100%',
-													borderRadius: '6px',
-													boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
-													display: 'block',
-												}}
-											/>
-										) : (
-											<div style={zoneStyles.cardPlaceholder}>{obj.card ? obj.card.name : 'Unknown'}</div>
-										)}
+										<CardDisplay card={obj.card} compact />
 									</div>
 								);
 							})}
@@ -507,6 +488,7 @@ export const zoneStyles = {
 		maxHeight: '100%',
 		aspectRatio: '5 / 7',
 		flexShrink: 0,
+		minWidth: 0,
 		cursor: 'move' as const,
 		userSelect: 'none' as const,
 		border: '1px solid #555',

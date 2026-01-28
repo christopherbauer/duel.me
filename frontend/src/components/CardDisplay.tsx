@@ -21,7 +21,7 @@ export const CardDisplay: React.FC<CardDisplayProps> = ({
 	overlay,
 	highlight = false,
 	compact = false,
-	scale = 1,
+	scale,
 	style,
 	className = '',
 	onError,
@@ -37,7 +37,6 @@ export const CardDisplay: React.FC<CardDisplayProps> = ({
 	const useFixedDimensions = scale != null;
 	const cardWidth = useFixedDimensions ? 120 * scale : undefined;
 	const cardHeight = useFixedDimensions ? 170 * scale : undefined;
-
 	// Counter display configuration
 	const counterDisplay = counters
 		? [
