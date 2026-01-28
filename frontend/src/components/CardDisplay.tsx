@@ -29,8 +29,10 @@ export const CardDisplay: React.FC<CardDisplayProps> = ({
 	if (!card) return null;
 
 	// For dual-faced cards, use the first face's image if card_faces exists
-	let imageUrl = (card.image_uris?.normal || card.image_uris?.large || card.image_uris?.small || '').trim();
-
+	let imageUrl = card && card.image_uris && card.image_uris.normal ? card.image_uris.normal : null;
+	if (!imageUrl && card?.card_faces && card.card_faces.length > 0) {
+		imageUrl = card.card_faces[0]?.image_uris?.normal || null;
+	}
 	// If no image_uris (or it's null/empty) and card_faces exists, use first face's image
 
 	// Fixed card dimensions only when scale > 1 (for precise battlefield positioning)
