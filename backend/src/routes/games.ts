@@ -22,10 +22,10 @@ const retrieveTokens = async () => {
 	}
 	tokenRecord = Object.values(tokens.rows).reduce(
 		(acc, token) => {
-			if (!(token.name in acc)) {
-				acc[token.name] = [];
+			if (!(token.id in acc)) {
+				acc[token.id] = [];
 			}
-			acc[token.name].push(token);
+			acc[token.id].push(token);
 			return acc;
 		},
 		{} as Record<string, Card[]>
@@ -288,7 +288,6 @@ router.get('/:id', async (req, res) => {
 				counters: obj.counters,
 				notes: obj.notes,
 				position: obj.position,
-				// tokens: gameTokens,
 			};
 		});
 		logger.debug(JSON.stringify(projectedObjects));
@@ -413,7 +412,7 @@ router.post('/:id/restart', async (req, res) => {
 router.get('/:id/tokens', async (req, res) => {
 	const { id } = req.params;
 	const extractTokens = (objects: AllPartsQueryResult[]) => {
-		const tokens: Record<string, { id: string; name: string }> = {};
+		const tokens: Record<string, { id: string; related_card: string; name: string }> = {};
 		for (const obj of objects) {
 			if (obj.all_parts && obj.all_parts.length > 0) {
 				for (const part of obj.all_parts) {
@@ -422,6 +421,7 @@ router.get('/:id/tokens', async (req, res) => {
 						if (!tokens[part.name]) {
 							tokens[part.name] = {
 								id: part.id,
+								related_card: obj.id,
 								name: part.name,
 							};
 						}
@@ -435,7 +435,7 @@ router.get('/:id/tokens', async (req, res) => {
 	const gameTokenList = extractTokens(allPartsResult || []);
 	const gameTokens = Object.values(gameTokenList)
 		.flatMap((tokenInfo) => {
-			const tokenCards = tokenRecord[tokenInfo.name];
+			const tokenCards = tokenRecord[tokenInfo.id];
 			if (tokenCards) {
 				return tokenCards;
 			} else {

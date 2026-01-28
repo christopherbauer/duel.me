@@ -21,7 +21,7 @@ const GamesStore = () => {
 
 	const getAllParts = async (id: string) => {
 		const allPartsResult = await query<AllPartsQueryResult>(
-			`SELECT c.all_parts 
+			`SELECT c.id, c.all_parts 
 			FROM game_objects go 
 				LEFT JOIN cards c ON go.card_id = c.id 
 			WHERE go.game_session_id = $1`,
