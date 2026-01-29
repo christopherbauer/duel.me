@@ -42,7 +42,7 @@ export const ScryModal: React.FC<ScryModalProps> = ({ cards, type, onConfirm, on
 				onDragStart={handleDragStart}
 				title={card.card && card.card.name ? card.card.name : 'Unknown'}
 			>
-				<CardDisplay card={card.card} style={{ height: '100%', width: '100%' }} />
+				<CardDisplay card={card.card} scale={3} style={{ height: '100%', width: '100%' }} />
 			</div>
 		);
 	};
@@ -281,8 +281,8 @@ const styles = {
 		alignContent: 'flex-start' as const,
 	},
 	card: {
-		width: '140px',
-		height: '195px',
+		width: '280px',
+		height: '390px',
 		flex: '0 0 auto',
 		cursor: 'move',
 		transition: 'opacity 0.2s, transform 0.2s',
