@@ -203,19 +203,17 @@ export const DeckLoader: React.FC<DeckLoaderProps> = ({ deckId, onDeckCreated, o
 				</div>
 			</div>
 
-			{legendaryCards.length > 0 && (
-				<div style={styles.formGroup}>
-					<label>Commander * (auto-detected from deck)</label>
-					<select value={selectedCommander} onChange={(e) => setSelectedCommander(e.target.value)} style={styles.input} disabled={loading}>
-						<option value="">Select a commander...</option>
-						{legendaryCards.map((card) => (
-							<option key={card.name} value={card.name}>
-								{card.name}
-							</option>
-						))}
-					</select>
-				</div>
-			)}
+			<div style={styles.formGroup}>
+				<label>Commander * (auto-detected from deck)</label>
+				<select value={selectedCommander} onChange={(e) => setSelectedCommander(e.target.value)} style={styles.input} disabled={loading}>
+					<option value="">Select a commander...</option>
+					{legendaryCards.map((card) => (
+						<option key={card.name} value={card.name}>
+							{card.name}
+						</option>
+					))}
+				</select>
+			</div>
 
 			<button onClick={handleSaveDeck} disabled={loading || legendaryCards.length === 0} style={styles.button}>
 				{loading ? 'Saving...' : isEditing ? 'Update Deck' : 'Create Deck'}

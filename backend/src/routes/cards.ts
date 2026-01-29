@@ -42,7 +42,7 @@ router.get('/search', async (req, res) => {
 
 	try {
 		const result = await CardsStore().getSearchResult(q, limit.toString());
-		res.json(result);
+		res.json(result?.rows || []);
 	} catch (error) {
 		console.error('Card search error:', error);
 		res.status(500).json({ error: 'Card search failed' });
