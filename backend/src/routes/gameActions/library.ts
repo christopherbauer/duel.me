@@ -129,24 +129,25 @@ export const surveil: ActionMethod<SurveilMetadata> = async (gameId, seat, metad
 const getRandom = (low: number, high: number) => Math.floor(Math.random() * (high - low + 1)) + low;
 const getHalfRandom = (size: number) => Math.floor(size / 2) + getRandom(-2, 2);
 
-// Simulate a human-like riffle shuffle, didn't want to do pure random which generally feels "off"
+// Simulate a human-like riffle shuffle: split into halves, split each into top/bottom,
+// shuffle tops together and bottoms together, then repeat (proper Commander-style riffle)
 const humanRiffleShuffle = (cardIds: string[]): string[] => {
-	// Perform the riffle shuffle 2-3 times
-	const shuffleIterations = getRandom(15, 30);
+	// Perform the riffle shuffle 3-5 times for proper randomization
+	const shuffleIterations = getRandom(3, 5);
 	for (let iteration = 0; iteration < shuffleIterations; iteration++) {
 		// Split into two halves
 		const midpoint = getHalfRandom(cardIds.length);
 		const half1 = cardIds.slice(0, midpoint);
 		const half2 = cardIds.slice(midpoint);
 
-		// Split each half into two piles (4 piles total)
+		// Split each half into top and bottom (4 piles total)
 		const half1Mid = getHalfRandom(half1.length);
-		const pile1 = half1.slice(0, half1Mid);
-		const pile2 = half1.slice(half1Mid);
+		const half1Top = half1.slice(0, half1Mid);
+		const half1Bottom = half1.slice(half1Mid);
 
 		const half2Mid = getHalfRandom(half2.length);
-		const pile3 = half2.slice(0, half2Mid);
-		const pile4 = half2.slice(half2Mid);
+		const half2Top = half2.slice(0, half2Mid);
+		const half2Bottom = half2.slice(half2Mid);
 
 		const mergePiles: (pileA: any[], pileB: any[]) => any[] = (pileA, pileB) => {
 			const merged = [];
@@ -161,10 +162,10 @@ const humanRiffleShuffle = (cardIds: string[]): string[] => {
 			return merged;
 		};
 
-		// Merge piles by alternating 1-3 cards at a time
-		const firstMerge = mergePiles(pile1, pile2);
-		const secondMerge = mergePiles(pile3, pile4);
-		cardIds = mergePiles(firstMerge, secondMerge);
+		// Merge tops together and bottoms together (proper riffle shuffle interleaving)
+		const topsShuffled = mergePiles(half1Top, half2Top);
+		const bottomsShuffled = mergePiles(half1Bottom, half2Bottom);
+		cardIds = mergePiles(topsShuffled, bottomsShuffled);
 	}
 	return cardIds;
 };
