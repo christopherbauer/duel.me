@@ -3,6 +3,9 @@ import { Card, CardSearchResult } from '../types/game';
 
 const CardsStore = () => {
 	const getCardsByName = (names: string[]) => {
+		if (!names || names.length === 0) {
+			return Promise.resolve([] as Card[]);
+		}
 		const placeholders = names.map((_, index) => `$${index + 1}`).join(', ');
 		const queryText = `SELECT * FROM cards WHERE name IN (${placeholders})`;
 		return query<Card>(queryText, names).then((result) => {

@@ -34,74 +34,82 @@ retrieveTokens();
 
 // Helper function to initialize game state
 const initializeGame = async (gameId: string, deckIds: string[]) => {
-	// Build game state columns dynamically based on player count
-	const seatCount = deckIds.length;
-	let gameStateColumns = 'game_session_id';
-	let gameStateValues = '$1';
-	const gameStateParams: any[] = [gameId];
+	try {
+		// Build game state columns dynamically based on player count
+		const seatCount = deckIds.length;
+		let gameStateColumns = 'game_session_id';
+		let gameStateValues = '$1';
+		const gameStateParams: any[] = [gameId];
 
-	for (let seat = 1; seat <= seatCount; seat++) {
-		gameStateColumns += `, seat${seat}_life`;
-		gameStateValues += `, 40`;
-	}
-	gameStateColumns += ', active_seat, turn_number';
-	gameStateValues += ', 1, 1';
+		for (let seat = 1; seat <= seatCount; seat++) {
+			gameStateColumns += `, seat${seat}_life`;
+			gameStateValues += `, 40`;
+		}
+		gameStateColumns += ', active_seat, turn_number';
+		gameStateValues += ', 1, 1';
 
-	// Initialize game state
-	await query(
-		`INSERT INTO game_state (${gameStateColumns})
+		// Initialize game state
+		logger.info(`Initializing game state with columns: ${gameStateColumns}`);
+		await query(
+			`INSERT INTO game_state (${gameStateColumns})
        VALUES (${gameStateValues})`,
-		gameStateParams
-	);
-
-	// Get commander IDs first
-	const commandersByDeck: Record<number, string[]> = {};
-	for (let seat = 0; seat < deckIds.length; seat++) {
-		const deckId = deckIds[seat];
-		const deckResult = await query<CommanderIds>(`SELECT commander_ids FROM decks WHERE id = $1`, [deckId]);
-		if (deckResult && deckResult.rows[0]?.commander_ids) {
-			commandersByDeck[seat + 1] = deckResult.rows[0].commander_ids;
-		} else {
-			commandersByDeck[seat + 1] = [];
-		}
-	}
-
-	// Load decks into library zones (excluding commanders)
-	for (let seat = 0; seat < deckIds.length; seat++) {
-		const seatNumber = seat + 1;
-		const deckId = deckIds[seat];
-		const deckCardsResult = await query<DeckCards>(
-			`SELECT dc.card_id, dc.quantity FROM deck_cards dc WHERE dc.deck_id = $1 AND dc.zone = 'library'`,
-			[deckId]
+			gameStateParams
 		);
-		if (!deckCardsResult) continue;
-		let libraryOrder = 0;
-		for (const row of deckCardsResult.rows) {
-			// Skip commanders - they should only be in command zone
-			if (commandersByDeck[seatNumber].includes(row.card_id)) continue;
+		logger.info(`Game state created for game ${gameId}`);
 
-			for (let i = 0; i < row.quantity; i++) {
-				await query(
-					`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id, "order")
+		// Get commander IDs first
+		const commandersByDeck: Record<number, string[]> = {};
+		for (let seat = 0; seat < deckIds.length; seat++) {
+			const deckId = deckIds[seat];
+			const deckResult = await query<CommanderIds>(`SELECT commander_ids FROM decks WHERE id = $1`, [deckId]);
+			if (deckResult && deckResult.rows[0]?.commander_ids) {
+				commandersByDeck[seat + 1] = deckResult.rows[0].commander_ids;
+			} else {
+				commandersByDeck[seat + 1] = [];
+			}
+		}
+
+		// Load decks into library zones (excluding commanders)
+		for (let seat = 0; seat < deckIds.length; seat++) {
+			const seatNumber = seat + 1;
+			const deckId = deckIds[seat];
+			const deckCardsResult = await query<DeckCards>(
+				`SELECT dc.card_id, dc.quantity FROM deck_cards dc WHERE dc.deck_id = $1 AND dc.zone = 'library'`,
+				[deckId]
+			);
+			if (!deckCardsResult) continue;
+			let libraryOrder = 0;
+			for (const row of deckCardsResult.rows) {
+				// Skip commanders - they should only be in command zone
+				if (commandersByDeck[seatNumber].includes(row.card_id)) continue;
+
+				for (let i = 0; i < row.quantity; i++) {
+					await query(
+						`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id, "order")
              VALUES ($1, $2, $3, 'library', $4, $5)`,
-					[uuidv4(), gameId, seatNumber, row.card_id, libraryOrder]
-				);
-				libraryOrder++;
+						[uuidv4(), gameId, seatNumber, row.card_id, libraryOrder]
+					);
+					libraryOrder++;
+				}
 			}
-		}
-		await handleGameAction(Actions.shuffle_library, gameId, seatNumber, {});
+			await handleGameAction(Actions.shuffle_library, gameId, seatNumber, {});
 
-		// Load commanders into command zone
-		if (commandersByDeck[seatNumber] && commandersByDeck[seatNumber].length > 0) {
-			for (const cmdId of commandersByDeck[seatNumber]) {
-				await query(
-					`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id)
+			// Load commanders into command zone
+			if (commandersByDeck[seatNumber] && commandersByDeck[seatNumber].length > 0) {
+				for (const cmdId of commandersByDeck[seatNumber]) {
+					await query(
+						`INSERT INTO game_objects (id, game_session_id, seat, zone, card_id)
              VALUES ($1, $2, $3, 'command_zone', $4)`,
-					[uuidv4(), gameId, seatNumber, cmdId]
-				);
+						[uuidv4(), gameId, seatNumber, cmdId]
+					);
+				}
 			}
+			await handleGameAction(Actions.draw, gameId, seatNumber, { count: 7 });
 		}
-		await handleGameAction(Actions.draw, gameId, seatNumber, { count: 7 });
+		logger.info(`Game initialization completed for game ${gameId}`);
+	} catch (error) {
+		logger.catchError(error);
+		throw error;
 	}
 };
 
@@ -172,11 +180,30 @@ router.post('/', async (req, res) => {
 	try {
 		const gameId = uuidv4();
 
+		// For single-deck games, name it "Goldfish - {CommanderName}"
+		let gameName = name;
+		if (count === 1 && !name) {
+			// Fetch the deck to get the commander name
+			const deckResult = await query<CommanderIds>(`SELECT commander_ids FROM decks WHERE id = $1`, [deck1_id]);
+			if (deckResult && deckResult.rows[0]?.commander_ids && deckResult.rows[0].commander_ids.length > 0) {
+				const commanderId = deckResult.rows[0].commander_ids[0];
+				const commanderResult = await query<{ name: string }>(`SELECT name FROM cards WHERE id = $1`, [commanderId]);
+				if (commanderResult && commanderResult.rows[0]) {
+					gameName = `Goldfish - ${commanderResult.rows[0].name}`;
+				}
+			}
+		}
+
+		// Default to timestamp if no name was provided or generated
+		if (!gameName) {
+			gameName = `Game ${new Date().toLocaleString()}`;
+		}
+
 		// Create game session
 		await query(
 			`INSERT INTO game_sessions (id, name, deck1_id, deck2_id, deck3_id, deck4_id, player_count, status) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')`,
-			[gameId, name || `Game ${new Date().toLocaleString()}`, deck1_id, deck2_id || null, deck3_id || null, deck4_id || null, count]
+			[gameId, gameName, deck1_id, deck2_id || null, deck3_id || null, deck4_id || null, count]
 		);
 
 		// Initialize game state
@@ -187,7 +214,7 @@ router.post('/', async (req, res) => {
 
 		await initializeGame(gameId, deckIds);
 
-		res.status(201).json({ id: gameId, name: name || 'New Game' });
+		res.status(201).json({ id: gameId, name: gameName });
 	} catch (error) {
 		console.error('Game creation error:', error);
 		res.status(500).json({ error: 'Failed to create game' });
@@ -316,7 +343,7 @@ router.get('/:id', async (req, res) => {
 
 		res.json(view);
 	} catch (error) {
-		console.error('Game fetch error:', error);
+		logger.catchError(error);
 		res.status(500).json({ error: 'Failed to fetch game' });
 	}
 });

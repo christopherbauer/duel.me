@@ -4,5 +4,6 @@ import { migration_003 } from './003 - Add order to game_objects';
 import { migration_004 } from './004 - Add indicators table';
 import { migration005 } from './005 - Add 4-player support';
 import { migration006 } from './006 - Add card_faces support';
+import { migration007 } from './007 - Make deck columns nullable';
 
-export const migrations = [migration_001, migration_002, migration_003, migration_004, migration005, migration006];
+export const migrations = [migration_001, migration_002, migration_003, migration_004, migration005, migration006, migration007];

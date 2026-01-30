@@ -26,7 +26,7 @@ async function getLatestBulkUrl(): Promise<string> {
 				response.on('end', () => {
 					try {
 						const json = JSON.parse(data) as BulkDataResponse;
-						const oracleCards = json.data?.find((item) => item.type === 'oracle_cards');
+						const oracleCards = json.data?.find((item) => item.type === 'all_cards');
 						if (oracleCards && oracleCards.download_uri) {
 							resolve(oracleCards.download_uri);
 						} else {
