@@ -7,37 +7,63 @@ import { AppCard, BulkCardResponse, BulkDataResponse, ScryfallCard } from './typ
 import { IncomingMessage } from 'http';
 import logger from '../core/logger';
 
-// Fetch latest bulk data URL from Scryfall
-async function getLatestBulkUrl(): Promise<string> {
+// Fetch latest bulk data URL from Scryfall with retry logic
+async function getLatestBulkUrl(retries = 3, delayMs = 1000): Promise<string> {
 	return new Promise((resolve, reject) => {
-		const options = {
-			hostname: 'api.scryfall.com',
-			path: '/bulk-data',
-			headers: {
-				'User-Agent': 'duel.me/0.1.0 (+https://github.com/christopherbauer/duel.me)',
-				Accept: 'application/json',
-			},
-		};
+		const attemptFetch = (attemptsLeft: number) => {
+			const options = {
+				hostname: 'api.scryfall.com',
+				path: '/bulk-data',
+				headers: {
+					'User-Agent': 'duel.me/0.1.0 (+https://github.com/christopherbauer/duel.me)',
+					Accept: 'application/json',
+				},
+				timeout: 10000,
+			};
 
-		https
-			.get(options, (response) => {
-				let data = '';
-				response.on('data', (chunk: string) => (data += chunk));
-				response.on('end', () => {
-					try {
-						const json = JSON.parse(data) as BulkDataResponse;
-						const oracleCards = json.data?.find((item) => item.type === 'oracle_cards');
-						if (oracleCards && oracleCards.download_uri) {
-							resolve(oracleCards.download_uri);
-						} else {
-							reject(new Error(`Oracle cards not found in bulk data. Got: ${JSON.stringify(json).substring(0, 200)}`));
+			https
+				.get(options, (response) => {
+					let data = '';
+					response.on('data', (chunk: string) => (data += chunk));
+					response.on('end', () => {
+						try {
+							const json = JSON.parse(data) as BulkDataResponse;
+							const oracleCards = json.data?.find((item) => item.type === 'all_cards');
+							if (oracleCards && oracleCards.download_uri) {
+								resolve(oracleCards.download_uri);
+							} else {
+								reject(new Error(`Oracle cards not found in bulk data. Got: ${JSON.stringify(json).substring(0, 200)}`));
+							}
+						} catch (e) {
+							reject(e);
 						}
-					} catch (e) {
-						reject(e);
+					});
+				})
+				.on('error', (err) => {
+					if (attemptsLeft > 0) {
+						logger.warn(
+							`Failed to fetch Scryfall bulk data (attempt ${retries - attemptsLeft + 1}/${retries}). Retrying in ${delayMs}ms...`
+						);
+						setTimeout(() => {
+							attemptFetch(attemptsLeft - 1);
+						}, delayMs);
+					} else {
+						reject(err);
+					}
+				})
+				.on('timeout', function () {
+					if (attemptsLeft > 0) {
+						logger.warn(`Scryfall request timeout (attempt ${retries - attemptsLeft + 1}/${retries}). Retrying in ${delayMs}ms...`);
+						setTimeout(() => {
+							attemptFetch(attemptsLeft - 1);
+						}, delayMs);
+					} else {
+						reject(new Error('Scryfall request timeout'));
 					}
 				});
-			})
-			.on('error', reject);
+		};
+
+		attemptFetch(retries);
 	});
 }
 
@@ -49,7 +75,7 @@ async function downloadAndSeedCards() {
 		SCRYFALL_BULK_URL = await getLatestBulkUrl();
 		logger.info(`Using: ${SCRYFALL_BULK_URL}`);
 	} catch (error) {
-		logger.info('Failed to fetch Scryfall bulk data URL');
+		logger.error('Failed to fetch Scryfall bulk data URL after retries');
 		logger.catchError(error);
 		throw error;
 	}
@@ -151,7 +177,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 	// Using multi-row insert with ON CONFLICT for upsertion
 	const values = cards
 		.map((card, i) => {
-			const offset = i * 39;
+			const offset = i * 40;
 			return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}::jsonb, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${
 				offset + 8
 			}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15}, $${
@@ -164,7 +190,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 				offset + 30
 			}, $${offset + 31}::jsonb, $${offset + 32}::jsonb, $${offset + 33}::jsonb, $${offset + 34}, $${offset + 35}, $${offset + 36}, $${
 				offset + 37
-			}, $${offset + 38}, $${offset + 39})`;
+			}, $${offset + 38}, $${offset + 39}, $${offset + 40}::jsonb)`;
 		})
 		.join(',');
 
@@ -208,6 +234,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
 		card.variation,
 		card.set,
 		card.rarity || null,
+		JSON.stringify(card.card_faces || []),
 	]);
 
 	const sql = `
@@ -217,7 +244,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
       image_status, image_uris, mana_cost, cmc, type_line, oracle_text, power,
       toughness, colors, color_identity, keywords, all_parts, legalities, games,
       reserved, game_changer, foil, nonfoil, finishes, oversized, promo, reprint,
-      variation, set, rarity
+      variation, set, rarity, card_faces
     )
     VALUES ${values}
     ON CONFLICT (id) DO UPDATE
@@ -233,6 +260,7 @@ async function insertCardBatch(cards: ScryfallCard[]) {
         color_identity = EXCLUDED.color_identity,
         keywords = EXCLUDED.keywords,
         image_uris = EXCLUDED.image_uris,
+        card_faces = EXCLUDED.card_faces,
         legalities = EXCLUDED.legalities,
         rarity = EXCLUDED.rarity,
         updated_at = NOW()

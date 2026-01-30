@@ -6,7 +6,11 @@ export async function migrate() {
 	try {
 		logger.info('Starting database migrations...');
 		for (const migration of migrations) {
-			await query(migration);
+			if (typeof migration === 'string') {
+				await query(migration);
+			} else if (typeof migration === 'function') {
+				await migration();
+			}
 		}
 	} catch (error) {
 		logger.info(`Migration failed`);

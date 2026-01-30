@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActionMethod } from '../types';
+import { CardDisplay } from './CardDisplay';
 
 interface ZoneDisplayProps {
 	zone: string;
@@ -117,38 +118,23 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 						>
 							{objects
 								.filter((o) => o.zone === zone)
-								.map((obj, idx) => {
-									const imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
-									return (
-										<div
-											key={obj.id}
-											style={{
-												...zoneStyles.stackedCard,
-												zIndex: idx,
-												transform: `translate(${idx * 2}px, ${idx * 7}px)`,
-											}}
-											onContextMenu={(e) => {
-												e.preventDefault();
-												if (onContextMenu) onContextMenu(e, obj.id);
-											}}
-											title={obj.card ? obj.card.name : 'Unknown'}
-										>
-											{imageUrl ? (
-												<img
-													src={imageUrl}
-													alt={obj.card ? obj.card.name : 'Unknown'}
-													style={{
-														width: '100%',
-														height: '100%',
-														borderRadius: '4px',
-													}}
-												/>
-											) : (
-												<div style={zoneStyles.cardPlaceholder}>{obj.card ? obj.card.name : 'Unknown'}</div>
-											)}
-										</div>
-									);
-								})}
+								.map((obj, idx) => (
+									<div
+										key={obj.id}
+										style={{
+											...zoneStyles.stackedCard,
+											zIndex: idx,
+											transform: `translate(${idx * 2}px, ${idx * 7}px)`,
+										}}
+										onContextMenu={(e) => {
+											e.preventDefault();
+											if (onContextMenu) onContextMenu(e, obj.id);
+										}}
+										title={obj.card ? obj.card.name : 'Unknown'}
+									>
+										<CardDisplay card={obj.card} compact />
+									</div>
+								))}
 						</div>
 					) : (
 						<div style={zoneStyles.emptyZone}>Empty</div>
@@ -218,40 +204,24 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 								justifyContent: 'center',
 							}}
 						>
-							{objects.map((obj) => {
-								const imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
-								return (
-									<div
-										key={obj.id}
-										style={{
-											...zoneStyles.handCard,
-											borderRadius: '4px',
-											cursor: 'pointer',
-											boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
-										}}
-										onContextMenu={(e) => {
-											e.preventDefault();
-											if (onContextMenu) onContextMenu(e, obj.id);
-										}}
-										title={obj.card ? obj.card.name : 'Unknown'}
-									>
-										{imageUrl ? (
-											<img
-												src={imageUrl}
-												alt={obj.card ? obj.card.name : 'Unknown'}
-												style={{
-													width: '100%',
-													height: '100%',
-													borderRadius: '4px',
-													objectFit: 'cover',
-												}}
-											/>
-										) : (
-											<div style={zoneStyles.cardPlaceholder}>{obj.card ? obj.card.name : 'Unknown'}</div>
-										)}
-									</div>
-								);
-							})}
+							{objects.map((obj) => (
+								<div
+									key={obj.id}
+									style={{
+										...zoneStyles.handCard,
+										borderRadius: '4px',
+										cursor: 'pointer',
+										boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
+									}}
+									onContextMenu={(e) => {
+										e.preventDefault();
+										if (onContextMenu) onContextMenu(e, obj.id);
+									}}
+									title={obj.card ? obj.card.name : 'Unknown'}
+								>
+									<CardDisplay card={obj.card} compact />
+								</div>
+							))}
 						</div>
 					) : (
 						<div style={zoneStyles.emptyZone}>Empty</div>
@@ -261,8 +231,6 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 					count > 0 ? (
 						<div style={zoneStyles.handContainer}>
 							{objects.map((obj, idx) => {
-								const imageUrl = obj.card && obj.card.image_uris && obj.card.image_uris.normal ? obj.card.image_uris.normal : null;
-
 								// Bell curve scale calculation
 								let scale = 1;
 								if (hoveredCardId === obj.id) {
@@ -298,21 +266,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 										}}
 										title={obj.card ? obj.card.name : 'Unknown'}
 									>
-										{imageUrl ? (
-											<img
-												src={imageUrl}
-												alt={obj.card ? obj.card.name : 'Unknown'}
-												style={{
-													width: '100%',
-													height: '100%',
-													borderRadius: '6px',
-													boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
-													display: 'block',
-												}}
-											/>
-										) : (
-											<div style={zoneStyles.cardPlaceholder}>{obj.card ? obj.card.name : 'Unknown'}</div>
-										)}
+										<CardDisplay card={obj.card} compact />
 									</div>
 								);
 							})}
@@ -497,6 +451,7 @@ export const zoneStyles = {
 		maxHeight: '100%',
 		aspectRatio: '5 / 7',
 		flexShrink: 0,
+		minWidth: 0,
 		cursor: 'move' as const,
 		userSelect: 'none' as const,
 		border: '1px solid #555',

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Zone } from './types';
 
 export interface Indicator {
 	id: string;
@@ -10,10 +11,14 @@ export interface Indicator {
 export interface GameState {
 	game_session_id: string;
 	seat1_life: number;
-	seat2_life: number;
+	seat2_life?: number;
+	seat3_life?: number;
+	seat4_life?: number;
 	seat1_commander_damage: number;
-	seat2_commander_damage: number;
-	active_seat: 1 | 2;
+	seat2_commander_damage?: number;
+	seat3_commander_damage?: number;
+	seat4_commander_damage?: number;
+	active_seat: 1 | 2 | 3 | 4;
 	turn_number: number;
 	objects: GameStateObjects[];
 	indicators?: Indicator[];
@@ -25,6 +30,7 @@ export interface GameStateObjects {
 	zone: Zone;
 	card: Card | null;
 	is_tapped: boolean;
+	is_token: boolean;
 	is_flipped: boolean;
 	counters: Counters;
 	notes: null;
@@ -43,6 +49,18 @@ export interface Card {
 	color_identity: string[];
 	keywords: string[];
 	layout: Layout;
+	image_uris?: ImageUris;
+	card_faces?: CardFace[];
+}
+export interface CardFace {
+	name: string;
+	mana_cost: string;
+	type_line: string;
+	oracle_text: string;
+	power?: string;
+	toughness?: string;
+	colors?: string[];
+	color_identity?: string[];
 	image_uris: ImageUris;
 }
 export interface ImageUris {
@@ -79,22 +97,15 @@ export interface Position {
 	y: number;
 }
 
-export enum Zone {
-	Battlefield = 'battlefield',
-	CommandZone = 'command_zone',
-	Library = 'library',
-	Exile = 'exile',
-}
-
 export interface GameStore {
 	currentGameId: string | null;
-	viewerSeat: 1 | 2;
+	viewerSeat: 1 | 2 | 3 | 4;
 	gameState: GameState | null;
 	availableTokens: Card[];
 	availableComponents: Card[];
 
 	setCurrentGame: (gameId: string) => void;
-	setViewerSeat: (seat: 1 | 2) => void;
+	setViewerSeat: (seat: 1 | 2 | 3 | 4) => void;
 	setGameState: (state: GameState) => void;
 	setAvailableTokens: (tokens: Card[]) => void;
 	setAvailableComponents: (components: Card[]) => void;
@@ -109,7 +120,7 @@ export const useGameStore = create<GameStore>((set) => ({
 	availableComponents: [],
 
 	setCurrentGame: (gameId: string) => set({ currentGameId: gameId }),
-	setViewerSeat: (seat: 1 | 2) => set({ viewerSeat: seat }),
+	setViewerSeat: (seat: 1 | 2 | 3 | 4) => set({ viewerSeat: seat }),
 	setGameState: (state: GameState) => {
 		set({ gameState: state });
 		set({ viewerSeat: state.active_seat });

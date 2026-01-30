@@ -14,6 +14,15 @@ export const libraryMenuItems = (): MenuItem[] => [
 		],
 	},
 	{
+		label: 'Mill',
+		submenu: [
+			{ label: '1', action: 'mill', metadata: { count: 1 } },
+			{ label: '2', action: 'mill', metadata: { count: 2 } },
+			{ label: '3', action: 'mill', metadata: { count: 3 } },
+			{ label: '4', action: 'mill', metadata: { count: 4 } },
+		],
+	},
+	{
 		label: 'Scry',
 		submenu: [
 			{ label: '1', action: 'scry', metadata: { count: 1 } },
@@ -60,6 +69,11 @@ export const handMenuItems = (objectId?: string): MenuItem[] => [
 ];
 export const graveyardMenuItems = (objectId?: string): MenuItem[] => [
 	{
+		label: 'Cast',
+		action: 'cast',
+		metadata: { objectId },
+	},
+	{
 		label: 'Return to Hand',
 		action: 'move_to_hand',
 		metadata: { objectId },
@@ -71,6 +85,11 @@ export const graveyardMenuItems = (objectId?: string): MenuItem[] => [
 	},
 ];
 export const exileMenuItems = (objectId?: string): MenuItem[] => [
+	{
+		label: 'Cast',
+		action: 'cast',
+		metadata: { objectId },
+	},
 	{
 		label: 'Return to Hand',
 		action: 'move_to_hand',

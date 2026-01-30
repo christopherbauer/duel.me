@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CardDisplay } from './CardDisplay';
 
 export interface ScryModalProps {
 	cards: any[];
@@ -41,11 +42,7 @@ export const ScryModal: React.FC<ScryModalProps> = ({ cards, type, onConfirm, on
 				onDragStart={handleDragStart}
 				title={card.card && card.card.name ? card.card.name : 'Unknown'}
 			>
-				{card.card && card.card.image_uris && card.card.image_uris.normal ? (
-					<img src={card.card.image_uris.normal} style={styles.cardImage} alt={card.card.name || 'Card'} />
-				) : (
-					<div style={styles.cardPlaceholder}>{card.card && card.card.name ? card.card.name : 'Unknown'}</div>
-				)}
+				<CardDisplay card={card.card} scale={3} style={{ height: '100%', width: '100%' }} />
 			</div>
 		);
 	};
@@ -284,35 +281,14 @@ const styles = {
 		alignContent: 'flex-start' as const,
 	},
 	card: {
-		width: '140px',
-		height: '195px',
+		width: '280px',
+		height: '390px',
 		flex: '0 0 auto',
 		cursor: 'move',
 		transition: 'opacity 0.2s, transform 0.2s',
 		border: '2px solid transparent',
 		borderRadius: '4px',
 		opacity: 1,
-	},
-	cardImage: {
-		width: '100%',
-		height: '100%',
-		borderRadius: '4px',
-		objectFit: 'cover' as const,
-	},
-	cardPlaceholder: {
-		width: '100%',
-		height: '100%',
-		backgroundColor: '#2a2a2a',
-		border: '1px solid #555',
-		borderRadius: '4px',
-		display: 'flex' as const,
-		alignItems: 'center' as const,
-		justifyContent: 'center' as const,
-		fontSize: '10px',
-		color: '#aaa',
-		textAlign: 'center' as const,
-		padding: '8px',
-		boxSizing: 'border-box' as const,
 	},
 	cardActions: {
 		display: 'flex' as const,

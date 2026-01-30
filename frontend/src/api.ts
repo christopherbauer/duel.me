@@ -22,7 +22,7 @@ export const api = {
 	// Games
 	listGames: () => client.get('/games'),
 	createGame: (payload: CreateGameRequest) => client.post('/games', payload),
-	getGame: (id: string, viewerSeat?: 1 | 2) =>
+	getGame: (id: string, viewerSeat?: 1 | 2 | 3 | 4) =>
 		client.get(`/games/${id}`, {
 			params: { viewer_seat: viewerSeat || 1 },
 		}),
@@ -34,4 +34,5 @@ export const api = {
 		}),
 	executeAction: (gameId: string, payload: any) => client.post(`/games/${gameId}/action`, payload),
 	restartGame: (gameId: string) => client.post(`/games/${gameId}/restart`),
+	endGame: (gameId: string) => client.post(`/games/${gameId}/end`),
 };

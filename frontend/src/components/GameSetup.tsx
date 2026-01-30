@@ -7,8 +7,13 @@ import { isAxiosError } from 'axios';
 export const GameSetup: React.FC = () => {
 	const navigate = useNavigate();
 	const [decks, setDecks] = useState<any[]>([]);
-	const [selectedDeck1, setSelectedDeck1] = useState('');
-	const [selectedDeck2, setSelectedDeck2] = useState('');
+	const [playerCount, setPlayerCount] = useState<1 | 2 | 3 | 4>(2);
+	const [selectedDecks, setSelectedDecks] = useState<Record<number, string>>({
+		1: '',
+		2: '',
+		3: '',
+		4: '',
+	});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
 
@@ -26,8 +31,10 @@ export const GameSetup: React.FC = () => {
 	};
 
 	const handleCreateGame = async () => {
-		if (!selectedDeck1 || !selectedDeck2) {
-			setError('Select both decks');
+		// Validate that at least the required decks are selected
+		const requiredDecks = selectedDecks[1] && (playerCount === 1 || selectedDecks[2]);
+		if (!requiredDecks || (playerCount >= 3 && !selectedDecks[3]) || (playerCount === 4 && !selectedDecks[4])) {
+			setError('Select decks for all players');
 			return;
 		}
 
@@ -35,12 +42,19 @@ export const GameSetup: React.FC = () => {
 		setError('');
 
 		try {
+			const deckNames = [];
+			for (let i = 1; i <= playerCount; i++) {
+				const deckName = decks.find((d) => d.id === selectedDecks[i])?.name || `Deck ${i}`;
+				deckNames.push(deckName);
+			}
+
 			const payload: CreateGameRequest = {
-				deck1_id: selectedDeck1,
-				deck2_id: selectedDeck2,
-				name: `${decks.find((d) => d.id === selectedDeck1).name || 'Deck 1'} vs ${
-					decks.find((d) => d.id === selectedDeck2).name || 'Deck 2'
-				}`,
+				deck1_id: selectedDecks[1],
+				deck2_id: playerCount >= 2 ? selectedDecks[2] : undefined,
+				deck3_id: playerCount >= 3 ? selectedDecks[3] : undefined,
+				deck4_id: playerCount === 4 ? selectedDecks[4] : undefined,
+				player_count: playerCount,
+				name: deckNames.join(' vs '),
 			};
 			const response = await api.createGame(payload);
 			navigate(`/games/${response.data.id}`);
@@ -61,28 +75,53 @@ export const GameSetup: React.FC = () => {
 			{error && <div style={styles.error}>{error}</div>}
 
 			<div style={styles.formGroup}>
-				<label>Seat 1 Deck *</label>
-				<select value={selectedDeck1} onChange={(e) => setSelectedDeck1(e.target.value)} style={styles.input} disabled={loading}>
-					<option value="">Select deck...</option>
-					{decks.map((deck) => (
-						<option key={deck.id} value={deck.id}>
-							{deck.name}
-						</option>
+				<label>Number of Players *</label>
+				<div style={styles.playerCountButtons}>
+					{[1, 2, 3, 4].map((count) => (
+						<button
+							key={count}
+							onClick={() => setPlayerCount(count as 1 | 2 | 3 | 4)}
+							disabled={loading}
+							style={{
+								...styles.playerCountButton,
+								...(playerCount === count ? styles.playerCountButtonActive : {}),
+							}}
+						>
+							{count} Player{count > 1 ? 's' : ''}
+						</button>
 					))}
-				</select>
+				</div>
 			</div>
 
-			<div style={styles.formGroup}>
-				<label>Seat 2 Deck *</label>
-				<select value={selectedDeck2} onChange={(e) => setSelectedDeck2(e.target.value)} style={styles.input} disabled={loading}>
-					<option value="">Select deck...</option>
-					{decks.map((deck) => (
-						<option key={deck.id} value={deck.id}>
-							{deck.name}
-						</option>
-					))}
-				</select>
-			</div>
+			{[1, 2, 3, 4].map((seat) => {
+				if (seat > playerCount) return null;
+
+				const seatLabel = seat === 1 ? 'Seat 1 Deck (Your Deck)' : `Seat ${seat} Deck`;
+
+				return (
+					<div key={seat} style={styles.formGroup}>
+						<label>{seatLabel} *</label>
+						<select
+							value={selectedDecks[seat]}
+							onChange={(e) =>
+								setSelectedDecks({
+									...selectedDecks,
+									[seat]: e.target.value,
+								})
+							}
+							style={styles.input}
+							disabled={loading}
+						>
+							<option value="">Select deck...</option>
+							{decks.map((deck) => (
+								<option key={deck.id} value={deck.id}>
+									{deck.name}
+								</option>
+							))}
+						</select>
+					</div>
+				);
+			})}
 
 			<button onClick={handleCreateGame} disabled={loading} style={styles.button}>
 				{loading ? 'Creating...' : 'Start Game'}
@@ -103,6 +142,27 @@ const styles = {
 	formGroup: {
 		marginBottom: '15px',
 	},
+	playerCountButtons: {
+		display: 'flex',
+		gap: '10px',
+		marginTop: '5px',
+	},
+	playerCountButton: {
+		flex: 1,
+		padding: '10px',
+		backgroundColor: '#333',
+		color: '#fff',
+		border: '2px solid #444',
+		borderRadius: '4px',
+		cursor: 'pointer',
+		fontSize: '14px',
+		fontWeight: 'bold',
+		transition: 'all 0.2s',
+	} as React.CSSProperties,
+	playerCountButtonActive: {
+		backgroundColor: '#0066ff',
+		borderColor: '#0066ff',
+	} as React.CSSProperties,
 	input: {
 		width: '100%',
 		padding: '10px',

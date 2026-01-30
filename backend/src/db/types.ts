@@ -1,6 +1,7 @@
 import { AllPart } from '../seed/types';
 
 export interface AllPartsQueryResult {
+	id: string;
 	all_parts: AllPart[];
 }
 export interface IndicatorQueryResult {

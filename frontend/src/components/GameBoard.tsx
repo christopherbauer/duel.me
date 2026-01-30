@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
 import { Card, GameStateObjects, useGameStore } from '../store';
@@ -10,7 +10,8 @@ import { GraveyardModal } from './GraveyardModal';
 import { LibrarySearchModal } from './LibrarySearchModal';
 import { BattlefieldIndicators } from './BattlefieldIndicators';
 import { GameAuditLog } from './GameAuditLog';
-import { ActionMethod } from '../types';
+import { CardDisplay } from './CardDisplay';
+import { ActionMethod, Zone, ZoneNames } from '../types';
 
 export const GameBoard: React.FC = () => {
 	const { gameId } = useParams<{ gameId: string }>();
@@ -53,6 +54,9 @@ export const GameBoard: React.FC = () => {
 	const [librarySearchModal, setLibrarySearchModal] = useState<GameStateObjects[] | null>(null);
 	const [showAuditLog, setShowAuditLog] = useState(false);
 	const [lastMovedCardId, setLastMovedCardId] = useState<string | null>(null);
+	const [seatLifeMap, setSeatLifeMap] = useState<{ [key: number]: number }>({});
+	const [seatObjectsMap, setSeatObjectsMap] = useState<{ [key: number]: GameStateObjects[] }>({});
+	const [allSeats, setAllSeats] = useState<number[]>([]);
 	const battlefieldRef = useRef<HTMLDivElement>(null);
 	const flippedSeatsRef = useRef<Set<number>>(new Set());
 
@@ -60,6 +64,7 @@ export const GameBoard: React.FC = () => {
 		if (!gameId) return;
 		try {
 			const response = await api.getGame(gameId, viewerSeat);
+
 			setGameState(response.data);
 		} catch (err) {
 			console.error('Failed to load game state:', err);
@@ -95,7 +100,6 @@ export const GameBoard: React.FC = () => {
 				const objectId = metadata?.objectId;
 				const counterType = metadata?.counterType;
 				if (!objectId || !counterType) return;
-
 				const updatedObjects = gameState.objects.map((obj) => {
 					if (obj.id === objectId) {
 						const currentCount = (obj.counters as any)[counterType] || 0;
@@ -320,18 +324,44 @@ export const GameBoard: React.FC = () => {
 		}
 	}, [viewerSeat, gameState, setGameState]);
 
+	useEffect(() => {
+		if (gameState) {
+			// Build life map from game state
+			const lifeMap: { [key: number]: number } = {};
+			for (let seat = 1; seat <= 4; seat++) {
+				const lifeValue = (gameState as any)[`seat${seat}_life`];
+				if (lifeValue !== undefined) {
+					lifeMap[seat] = lifeValue as number;
+				}
+			}
+			setSeatLifeMap(lifeMap);
+
+			// Build objects map for each seat
+			const objectsMap: { [key: number]: GameStateObjects[] } = {};
+			const seatsInGame = new Set<number>();
+			gameState.objects.forEach((obj) => {
+				seatsInGame.add(obj.seat);
+				if (!objectsMap[obj.seat]) {
+					objectsMap[obj.seat] = [];
+				}
+				objectsMap[obj.seat].push(obj);
+			});
+			setSeatObjectsMap(objectsMap);
+			setAllSeats(Array.from(seatsInGame).sort());
+		}
+	}, [gameState, viewerSeat]);
+
 	if (!gameState) {
 		return <div style={styles.loading}>Loading game...</div>;
 	}
 
-	const seat1Objects = gameState.objects.filter((obj) => obj.seat === 1);
-	const seat2Objects = gameState.objects.filter((obj) => obj.seat === 2);
-
-	const seat1Life = gameState.seat1_life;
-	const seat2Life = gameState.seat2_life;
-
-	const playerObjects = viewerSeat === 1 ? seat1Objects : seat2Objects;
-	const opponentObjects = viewerSeat === 1 ? seat2Objects : seat1Objects;
+	// Helper functions to get player and opponent objects
+	const getPlayerObjects = (): GameStateObjects[] => seatObjectsMap[viewerSeat] || [];
+	const getOpponentObjects = (): GameStateObjects[] => {
+		return allSeats.filter((seat) => seat !== viewerSeat).flatMap((seat) => seatObjectsMap[seat] || []);
+	};
+	const getPlayerLife = (): number => seatLifeMap[viewerSeat] || 0;
+	const getOpponentSeats = (): number[] => allSeats.filter((seat) => seat !== viewerSeat);
 
 	function handleCardDropOnBattlefield(e: React.DragEvent<HTMLDivElement>, cardId: string) {
 		e.preventDefault();
@@ -368,7 +398,7 @@ export const GameBoard: React.FC = () => {
 			const x = e.clientX - rect.left - 75;
 			const y = e.clientY - rect.top - 100;
 
-			handleGameAction('move_to_battlefield', undefined, {
+			handleGameAction('cast', undefined, {
 				objectId: cardId,
 				position: { x, y },
 			});
@@ -381,8 +411,14 @@ export const GameBoard: React.FC = () => {
 			<div style={styles.header}>
 				<h1 style={styles.title}>duel.me — Game Board</h1>
 				<div style={styles.headerControls}>
-					<button onClick={() => setViewerSeat(viewerSeat === 1 ? 2 : 1)} style={styles.switchButton}>
-						Seat {viewerSeat === 1 ? 2 : 1}
+					<button
+						onClick={() => {
+							const nextSeatIndex = (allSeats.indexOf(viewerSeat) + 1) % allSeats.length;
+							setViewerSeat(allSeats[nextSeatIndex] as 1 | 2 | 3 | 4);
+						}}
+						style={styles.switchButton}
+					>
+						Seat {allSeats[(allSeats.indexOf(viewerSeat) + 1) % allSeats.length]}
 					</button>
 					<button onClick={() => setShowSettings(!showSettings)} style={styles.settingsButton}>
 						⋮
@@ -401,7 +437,7 @@ export const GameBoard: React.FC = () => {
 
 					<div style={{ marginTop: '10px' }}>Card Size</div>
 					<div style={styles.cardScaleControls}>
-						{[1, 1.5, 2, 4].map((scale) => (
+						{[1, 1.5, 2, 3, 4].map((scale) => (
 							<button
 								key={scale}
 								onClick={() => setCardScale(scale)}
@@ -431,34 +467,36 @@ export const GameBoard: React.FC = () => {
 			<div style={styles.board}>
 				{/* Opponent Section (5%) */}
 				<div style={styles.opponentSection}>
-					<div style={styles.sectionHeader}>
-						<div style={styles.seatLabel}>{viewerSeat === 1 ? 'Seat 2 (Opponent)' : 'Seat 1 (Opponent)'}</div>
-						<div style={styles.lifeCounter}>
-							<span style={styles.lifeValue}>{viewerSeat === 1 ? seat2Life : seat1Life}</span>
-							<div style={styles.lifeBars}>
-								<button
-									style={styles.lifeButton}
-									onClick={() =>
-										handleGameAction('life_change', viewerSeat === 1 ? 2 : 1, {
-											amount: -1,
-										})
-									}
-								>
-									−
-								</button>
-								<button
-									style={styles.lifeButton}
-									onClick={() =>
-										handleGameAction('life_change', viewerSeat === 1 ? 2 : 1, {
-											amount: 1,
-										})
-									}
-								>
-									+
-								</button>
+					{getOpponentSeats().map((opponentSeat) => (
+						<div key={opponentSeat} style={styles.sectionHeader}>
+							<div style={styles.seatLabel}>Seat {opponentSeat} (Opponent)</div>
+							<div style={styles.lifeCounter}>
+								<span style={styles.lifeValue}>{seatLifeMap[opponentSeat] || 0}</span>
+								<div style={styles.lifeBars}>
+									<button
+										style={styles.lifeButton}
+										onClick={() =>
+											handleGameAction('life_change', opponentSeat, {
+												amount: -1,
+											})
+										}
+									>
+										−
+									</button>
+									<button
+										style={styles.lifeButton}
+										onClick={() =>
+											handleGameAction('life_change', opponentSeat, {
+												amount: 1,
+											})
+										}
+									>
+										+
+									</button>
+								</div>
 							</div>
 						</div>
-					</div>
+					))}
 					<div style={styles.zoneGrid}>
 						{['hand', 'library', 'graveyard', 'command_zone', 'exile'].map((zone) => {
 							const zoneLabel = zone === 'command_zone' ? 'Commander' : zone.charAt(0).toUpperCase() + zone.slice(1);
@@ -467,8 +505,8 @@ export const GameBoard: React.FC = () => {
 									key={zone}
 									zone={zone}
 									label={zoneLabel}
-									seat={viewerSeat === 1 ? 2 : 1}
-									objects={opponentObjects.filter((o) => o.zone === zone)}
+									seat={getOpponentSeats()[0] || viewerSeat}
+									objects={getOpponentObjects().filter((o) => o.zone === zone)}
 									redacted={zone === 'hand' || zone === 'library'}
 									onCountClick={() => setShowZoneBreakdown(`opponent-${zone}`)}
 									showBreakdown={false}
@@ -486,11 +524,11 @@ export const GameBoard: React.FC = () => {
 					<div style={zoneStyles.zoneLabel}>Battlefield</div>
 
 					{/* Opponent's cards mini preview */}
-					{opponentObjects.filter((o) => o.zone === 'battlefield').length > 0 && (
+					{getOpponentObjects().filter((o) => o.zone === 'battlefield').length > 0 && (
 						<div style={styles.opponentPreview}>
-							<div style={styles.opponentPreviewLabel}>Opponent's Cards</div>
+							<div style={styles.opponentPreviewLabel}>Opponent's Field</div>
 							<div style={styles.opponentPreviewGrid}>
-								{opponentObjects
+								{getOpponentObjects()
 									.filter((o) => o.zone === 'battlefield')
 									.map((obj) => (
 										<div
@@ -506,7 +544,7 @@ export const GameBoard: React.FC = () => {
 											}}
 											onMouseLeave={() => setHoveredOpponentCard(null)}
 										>
-											<CardImage card={obj.card} isTapped={obj.is_tapped} scale={0.4} counters={obj.counters} />
+											<CardDisplay card={obj.card} isToken={obj.is_token} isTapped={obj.is_tapped} counters={obj.counters} scale={0.5} />
 										</div>
 									))}
 							</div>
@@ -587,7 +625,7 @@ export const GameBoard: React.FC = () => {
 												: 1,
 									}}
 								>
-									<CardImage card={obj.card} isTapped={obj.is_tapped} scale={cardScale} counters={obj.counters} />
+									<CardDisplay card={obj.card} isToken={obj.is_token} isTapped={obj.is_tapped} counters={obj.counters} scale={cardScale} />
 								</div>
 							))}
 					</div>
@@ -598,7 +636,7 @@ export const GameBoard: React.FC = () => {
 					{/* Opponent card hover preview popup */}
 					{hoveredOpponentCard &&
 						(() => {
-							const hoveredCard = opponentObjects.find((o) => o.id === hoveredOpponentCard);
+							const hoveredCard = getOpponentObjects().find((o) => o.id === hoveredOpponentCard);
 							return (
 								hoveredCard && (
 									<div
@@ -608,7 +646,7 @@ export const GameBoard: React.FC = () => {
 											top: `${hoverPos.y}px`,
 										}}
 									>
-										<CardImage card={hoveredCard.card} isTapped={hoveredCard.is_tapped} scale={2} counters={hoveredCard.counters} />
+										<CardDisplay card={hoveredCard.card} isTapped={hoveredCard.is_tapped} counters={hoveredCard.counters} scale={2} />
 									</div>
 								)
 							);
@@ -620,12 +658,12 @@ export const GameBoard: React.FC = () => {
 					<div style={styles.sectionHeader}>
 						<div style={styles.seatLabel}>Seat {viewerSeat} (You)</div>
 						<div style={styles.lifeCounter}>
-							<span style={styles.lifeValue}>{viewerSeat === 1 ? seat1Life : seat2Life}</span>
+							<span style={styles.lifeValue}>{getPlayerLife()}</span>
 							<div style={styles.lifeBars}>
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										handleGameAction('life_change', viewerSeat === 1 ? 1 : 2, {
+										handleGameAction('life_change', viewerSeat, {
 											amount: -1,
 										})
 									}
@@ -635,7 +673,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										handleGameAction('life_change', viewerSeat === 1 ? 1 : 2, {
+										handleGameAction('life_change', viewerSeat, {
 											amount: 1,
 										})
 									}
@@ -646,15 +684,16 @@ export const GameBoard: React.FC = () => {
 						</div>
 					</div>
 					<div style={styles.zoneGrid}>
-						{['hand', 'library', 'graveyard', 'command_zone', 'exile'].map((zone) => {
-							const zoneLabel = zone === 'command_zone' ? 'Commander' : zone.charAt(0).toUpperCase() + zone.slice(1);
+						{[Zone.hand, Zone.library, Zone.graveyard, Zone.command_zone, Zone.exile].map((zone) => {
+							const zoneLabel = ZoneNames[zone];
+
 							return (
 								<ZoneDisplay
 									key={zone}
 									zone={zone}
 									label={zoneLabel}
 									seat={viewerSeat}
-									objects={playerObjects.filter((o) => o.zone === zone)}
+									objects={getPlayerObjects().filter((o) => o.zone === zone)}
 									redacted={false}
 									onCardDragStart={(cardId) => setDraggedCard(cardId)}
 									onCountClick={() => setShowZoneBreakdown(`player-${zone}`)}
@@ -663,7 +702,7 @@ export const GameBoard: React.FC = () => {
 										setContextMenu({
 											x: e.clientX,
 											y: e.clientY,
-											type: zone as any,
+											type: zone as 'library' | 'hand' | 'graveyard' | 'exile' | 'battlefield',
 											objectId,
 										})
 									}
@@ -765,89 +804,6 @@ export const GameBoard: React.FC = () => {
 			<div style={styles.turnInfo}>
 				Turn {gameState.turn_number} • Active: Seat {gameState.active_seat}
 			</div>
-		</div>
-	);
-};
-
-interface CardImageProps {
-	card?: Card | null | undefined;
-	isTapped?: boolean;
-	scale?: number;
-	counters?: any;
-}
-
-const CardImage: React.FC<CardImageProps> = ({ card, isTapped, scale = 1, counters }) => {
-	const imageUrl = (card && card.image_uris && card.image_uris.normal) || (card && card.image_uris && card.image_uris.large) || null;
-
-	const cardWidth = 120 * scale;
-	const cardHeight = 170 * scale;
-
-	const counterDisplay = [
-		{ type: 'plus_one_plus_one', label: '+1/+1', color: '#00ff00' },
-		{ type: 'minus_one_minus_one', label: '-1/-1', color: '#ff0000' },
-		{ type: 'charge', label: '⚡', color: '#ffff00' },
-		{ type: 'generic', label: '◆', color: '#cccccc' },
-	]
-		.filter((counter) => counters && counters[counter.type] > 0)
-		.map((counter) => ({
-			...counter,
-			count: counters[counter.type],
-		}));
-
-	return (
-		<div
-			style={{
-				...styles.cardImage,
-				width: `${cardWidth}px`,
-				height: `${cardHeight}px`,
-				transform: isTapped ? 'rotate(90deg)' : 'rotate(0deg)',
-				position: 'relative' as const,
-			}}
-		>
-			{imageUrl ? (
-				<img
-					src={imageUrl}
-					alt={card ? card.name : 'Unknown Card'}
-					style={{
-						...styles.cardImageImg,
-						width: '100%',
-						height: '100%',
-					}}
-					onError={(e) => {
-						(e.target as HTMLImageElement).style.display = 'none';
-					}}
-				/>
-			) : (
-				<div style={styles.cardPlaceholder}>
-					<div style={styles.cardCost}>{card ? card.mana_cost : ''}</div>
-					<div style={styles.cardName}>{card ? card.name : 'Unknown'}</div>
-					<div style={styles.cardType}>{card ? card.type_line : ''}</div>
-					<div style={styles.cardText}>{card ? card.oracle_text : ''}</div>
-					{card && card.power && card.toughness && (
-						<div style={styles.cardPT}>
-							{card.power}/{card.toughness}
-						</div>
-					)}
-				</div>
-			)}
-			{isTapped && <div style={styles.tappedLabel}>TAP</div>}
-			{counterDisplay.length > 0 && (
-				<div style={styles.counterContainer}>
-					{counterDisplay.map((counter, idx) => (
-						<div
-							key={idx}
-							style={{
-								...styles.counter,
-								backgroundColor: counter.color,
-							}}
-							title={`${counter.count} ${counter.label}`}
-						>
-							{counter.count > 1 ? counter.count : ''}
-							{counter.label}
-						</div>
-					))}
-				</div>
-			)}
 		</div>
 	);
 };
@@ -1054,6 +1010,7 @@ const styles = {
 	opponentPreviewCard: {
 		width: '50px',
 		height: '68px',
+		marginRight: '6px',
 		flexShrink: 0,
 	},
 	positionedCard: {
@@ -1061,118 +1018,6 @@ const styles = {
 		cursor: 'move',
 		userSelect: 'none' as const,
 		transition: 'box-shadow 0.2s',
-	},
-	cardImage: {
-		cursor: 'pointer',
-		transition: 'transform 0.2s',
-		perspective: '1000px',
-	},
-	cardImageImg: {
-		borderRadius: '8px',
-		boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-		userSelect: 'none' as const,
-	},
-	cardPlaceholder: {
-		width: '100%',
-		height: '100%',
-		backgroundColor: '#1a1a1a',
-		border: '1px solid #444',
-		borderRadius: '6px',
-		padding: '6px',
-		display: 'flex' as const,
-		flexDirection: 'column' as const,
-		justifyContent: 'flex-start',
-		alignItems: 'stretch',
-		textAlign: 'left' as const,
-		fontSize: '9px',
-		boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-		position: 'relative' as const,
-		overflow: 'hidden' as const,
-	},
-	cardCost: {
-		position: 'absolute' as const,
-		top: '3px',
-		right: '3px',
-		fontSize: '7px',
-		fontWeight: 'bold' as const,
-		color: '#ffd700',
-		minWidth: '16px',
-		textAlign: 'center' as const,
-	},
-	cardName: {
-		fontWeight: 'bold' as const,
-		fontSize: '7px',
-		marginBottom: '1px',
-		color: '#fff',
-		lineHeight: '1.1',
-		flex: '0 0 auto',
-	},
-	cardType: {
-		fontSize: '6px',
-		color: '#bbb',
-		marginBottom: '2px',
-		lineHeight: '1' as const,
-		flex: '0 0 auto',
-		borderTop: '1px solid #555',
-		borderBottom: '1px solid #555',
-		paddingTop: '1px',
-		paddingBottom: '1px',
-	},
-	cardText: {
-		fontSize: '6px',
-		color: '#ddd',
-		flex: '1 1 auto',
-		overflowY: 'auto' as const,
-		marginBottom: '2px',
-		lineHeight: '1.2',
-	},
-	cardPT: {
-		position: 'absolute' as const,
-		bottom: '3px',
-		right: '3px',
-		fontSize: '6px',
-		fontWeight: 'bold' as const,
-		color: '#fff',
-		backgroundColor: '#000',
-		padding: '1px 2px',
-		borderRadius: '2px',
-		flex: '0 0 auto',
-	},
-	tappedLabel: {
-		position: 'absolute' as const,
-		top: '50%',
-		left: '50%',
-		transform: 'translate(-50%, -50%) rotate(-90deg)',
-		backgroundColor: 'rgba(255, 0, 0, 0.7)',
-		color: '#fff',
-		padding: '5px 10px',
-		fontSize: '12px',
-		fontWeight: 'bold' as const,
-		borderRadius: '4px',
-		pointerEvents: 'none' as const,
-	},
-	counterContainer: {
-		position: 'absolute' as const,
-		bottom: '4px',
-		left: '4px',
-		display: 'flex' as const,
-		gap: '2px',
-		flexWrap: 'wrap' as const,
-		maxWidth: '80px',
-		pointerEvents: 'none' as const,
-	},
-	counter: {
-		padding: '2px 4px',
-		borderRadius: '3px',
-		fontSize: '9px',
-		fontWeight: 'bold' as const,
-		color: '#000',
-		display: 'flex' as const,
-		alignItems: 'center' as const,
-		gap: '2px',
-		minWidth: '20px',
-		justifyContent: 'center' as const,
-		textShadow: '0 0 2px rgba(255, 255, 255, 0.5)',
 	},
 	zoneGrid: {
 		display: 'grid',

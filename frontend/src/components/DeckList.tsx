@@ -143,30 +143,35 @@ export const DeckList: React.FC = () => {
 							<div
 								style={{
 									...styles.deckCard,
-									backgroundImage: deck.commander_image ? `url(${deck.commander_image})` : undefined,
-									backgroundSize: 'cover',
-									backgroundPosition: 'center',
-									backgroundRepeat: 'no-repeat',
-									position: 'relative',
-									overflow: 'hidden',
 								}}
 							>
-								<div
-									style={{
-										position: 'absolute',
-										top: 0,
-										left: 0,
-										width: '100%',
-										height: '100%',
-										background: deck.commander_image ? 'rgba(30,30,30,0.75)' : undefined,
-										zIndex: 1,
-									}}
-								/>
-								<div style={{ position: 'relative', zIndex: 2 }}>
-									<div style={styles.deckName}>{deck.name}</div>
-									{deck.description && <div style={styles.deckDescription}>{deck.description}</div>}
-									<div style={styles.deckDate}>Updated {new Date(deck.updated_at).toLocaleDateString()}</div>
-									<div style={styles.deckActions}>
+								<div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', height: '100%' }}>
+									<div
+										style={{
+											backgroundColor: 'rgba(0, 0, 0, 0.6)',
+											padding: '2px 12px 6px 12px',
+											marginBottom: '2px',
+											borderRadius: '4px',
+										}}
+									>
+										<div style={styles.deckName}>{deck.name}</div>
+										{deck.description && <div style={styles.deckDescription}>{deck.description}</div>}
+										<div style={styles.deckDate}>Updated {new Date(deck.updated_at).toLocaleDateString()}</div>
+									</div>
+									<div
+										style={{
+											flex: 1,
+											width: '100%',
+											zIndex: 1,
+											backgroundImage: deck.commander_image ? `url(${deck.commander_image})` : undefined,
+											backgroundSize: 'cover',
+											backgroundPosition: 'center top',
+											backgroundRepeat: 'no-repeat',
+											position: 'relative',
+											overflow: 'hidden',
+										}}
+									/>
+									<div style={{ ...styles.deckActions, position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 3 }}>
 										<span
 											style={{
 												...styles.editButton,
@@ -235,9 +240,12 @@ const styles = {
 	},
 	deckCard: {
 		backgroundColor: '#2a2a2a',
-		padding: '15px',
+		padding: '0',
 		borderRadius: '8px',
 		border: '1px solid #444',
+		height: '300px',
+		display: 'flex',
+		flexDirection: 'column',
 	},
 	deckName: {
 		fontSize: '16px',
@@ -253,11 +261,12 @@ const styles = {
 	deckDate: {
 		fontSize: '11px',
 		color: '#666',
-		marginBottom: '12px',
+		marginBottom: '4px',
 	},
 	deckActions: {
 		display: 'flex',
 		gap: '8px',
+		padding: '0 12px 12px 12px',
 	},
 	editButton: {
 		flex: 1,
