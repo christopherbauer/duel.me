@@ -26,7 +26,9 @@ const CardsStore = () => {
 			   WHERE name ILIKE $1 
 			   LIMIT $2`,
 			[`${q}%`, Math.min(parseInt(limit as string) || 20, 100)]
-		);
+		).then((result) => {
+			return result?.rows;
+		});
 	};
 	return {
 		getCardsByName,
