@@ -7,37 +7,63 @@ import { AppCard, BulkCardResponse, BulkDataResponse, ScryfallCard } from './typ
 import { IncomingMessage } from 'http';
 import logger from '../core/logger';
 
-// Fetch latest bulk data URL from Scryfall
-async function getLatestBulkUrl(): Promise<string> {
+// Fetch latest bulk data URL from Scryfall with retry logic
+async function getLatestBulkUrl(retries = 3, delayMs = 1000): Promise<string> {
 	return new Promise((resolve, reject) => {
-		const options = {
-			hostname: 'api.scryfall.com',
-			path: '/bulk-data',
-			headers: {
-				'User-Agent': 'duel.me/0.1.0 (+https://github.com/christopherbauer/duel.me)',
-				Accept: 'application/json',
-			},
-		};
+		const attemptFetch = (attemptsLeft: number) => {
+			const options = {
+				hostname: 'api.scryfall.com',
+				path: '/bulk-data',
+				headers: {
+					'User-Agent': 'duel.me/0.1.0 (+https://github.com/christopherbauer/duel.me)',
+					Accept: 'application/json',
+				},
+				timeout: 10000,
+			};
 
-		https
-			.get(options, (response) => {
-				let data = '';
-				response.on('data', (chunk: string) => (data += chunk));
-				response.on('end', () => {
-					try {
-						const json = JSON.parse(data) as BulkDataResponse;
-						const oracleCards = json.data?.find((item) => item.type === 'all_cards');
-						if (oracleCards && oracleCards.download_uri) {
-							resolve(oracleCards.download_uri);
-						} else {
-							reject(new Error(`Oracle cards not found in bulk data. Got: ${JSON.stringify(json).substring(0, 200)}`));
+			https
+				.get(options, (response) => {
+					let data = '';
+					response.on('data', (chunk: string) => (data += chunk));
+					response.on('end', () => {
+						try {
+							const json = JSON.parse(data) as BulkDataResponse;
+							const oracleCards = json.data?.find((item) => item.type === 'all_cards');
+							if (oracleCards && oracleCards.download_uri) {
+								resolve(oracleCards.download_uri);
+							} else {
+								reject(new Error(`Oracle cards not found in bulk data. Got: ${JSON.stringify(json).substring(0, 200)}`));
+							}
+						} catch (e) {
+							reject(e);
 						}
-					} catch (e) {
-						reject(e);
+					});
+				})
+				.on('error', (err) => {
+					if (attemptsLeft > 0) {
+						logger.warn(
+							`Failed to fetch Scryfall bulk data (attempt ${retries - attemptsLeft + 1}/${retries}). Retrying in ${delayMs}ms...`
+						);
+						setTimeout(() => {
+							attemptFetch(attemptsLeft - 1);
+						}, delayMs);
+					} else {
+						reject(err);
+					}
+				})
+				.on('timeout', function () {
+					if (attemptsLeft > 0) {
+						logger.warn(`Scryfall request timeout (attempt ${retries - attemptsLeft + 1}/${retries}). Retrying in ${delayMs}ms...`);
+						setTimeout(() => {
+							attemptFetch(attemptsLeft - 1);
+						}, delayMs);
+					} else {
+						reject(new Error('Scryfall request timeout'));
 					}
 				});
-			})
-			.on('error', reject);
+		};
+
+		attemptFetch(retries);
 	});
 }
 
@@ -49,7 +75,7 @@ async function downloadAndSeedCards() {
 		SCRYFALL_BULK_URL = await getLatestBulkUrl();
 		logger.info(`Using: ${SCRYFALL_BULK_URL}`);
 	} catch (error) {
-		logger.info('Failed to fetch Scryfall bulk data URL');
+		logger.error('Failed to fetch Scryfall bulk data URL after retries');
 		logger.catchError(error);
 		throw error;
 	}
