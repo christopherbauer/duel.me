@@ -100,7 +100,6 @@ export const GameBoard: React.FC = () => {
 				const objectId = metadata?.objectId;
 				const counterType = metadata?.counterType;
 				if (!objectId || !counterType) return;
-
 				const updatedObjects = gameState.objects.map((obj) => {
 					if (obj.id === objectId) {
 						const currentCount = (obj.counters as any)[counterType] || 0;
@@ -545,7 +544,7 @@ export const GameBoard: React.FC = () => {
 											}}
 											onMouseLeave={() => setHoveredOpponentCard(null)}
 										>
-											<CardDisplay card={obj.card} isTapped={obj.is_tapped} counters={obj.counters} scale={0.5} />
+											<CardDisplay card={obj.card} isToken={obj.is_token} isTapped={obj.is_tapped} counters={obj.counters} scale={0.5} />
 										</div>
 									))}
 							</div>
@@ -626,7 +625,7 @@ export const GameBoard: React.FC = () => {
 												: 1,
 									}}
 								>
-									<CardDisplay card={obj.card} isTapped={obj.is_tapped} counters={obj.counters} scale={cardScale} />
+									<CardDisplay card={obj.card} isToken={obj.is_token} isTapped={obj.is_tapped} counters={obj.counters} scale={cardScale} />
 								</div>
 							))}
 					</div>

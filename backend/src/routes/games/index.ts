@@ -19,7 +19,7 @@ const retrieveTokens = async () => {
 	if (!tokens) {
 		throw new Error('Failed to retrieve tokens from database');
 	}
-	tokenRecord = Object.values(tokens.rows).reduce(
+	tokenRecord = Object.values(tokens).reduce(
 		(acc, token) => {
 			if (!(token.id in acc)) {
 				acc[token.id] = [];

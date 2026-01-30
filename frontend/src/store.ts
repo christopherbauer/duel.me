@@ -30,6 +30,7 @@ export interface GameStateObjects {
 	zone: Zone;
 	card: Card | null;
 	is_tapped: boolean;
+	is_token: boolean;
 	is_flipped: boolean;
 	counters: Counters;
 	notes: null;

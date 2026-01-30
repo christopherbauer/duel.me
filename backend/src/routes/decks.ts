@@ -66,7 +66,7 @@ router.post('/', async (req, res) => {
 		// Parse commander IDs
 		const commanderIds: string[] = [];
 		for (const cmdName of commanderCardNames) {
-			const cardResult = await query<CardId>('SELECT id FROM cards WHERE name ILIKE $1 LIMIT 1', [cmdName]);
+			const cardResult = await query<CardId>("SELECT id FROM cards WHERE lang='en' AND name ILIKE $1 LIMIT 1", [cmdName]);
 			if (cardResult && cardResult.rows && cardResult?.rows?.length > 0) {
 				commanderIds.push(cardResult.rows[0].id);
 			}
@@ -87,7 +87,7 @@ router.post('/', async (req, res) => {
 				const quantity = parseInt(match[1]);
 				const cardName = match[2].trim();
 
-				const cardResult = await query<CardId>('SELECT id FROM cards WHERE name ILIKE $1 LIMIT 1', [cardName]);
+				const cardResult = await query<CardId>("SELECT id FROM cards WHERE lang='en' AND name ILIKE $1 LIMIT 1", [cardName]);
 				if (cardResult && cardResult.rows && cardResult?.rows?.length > 0) {
 					const cardId = cardResult.rows[0].id;
 					await query(
@@ -132,7 +132,7 @@ router.get('/:id', async (req, res) => {
 		const cardsResult = await query<DeckDetails>(
 			`SELECT dc.quantity, dc.zone, c.id, c.name, c.type_line, c.mana_cost, c.colors, c.image_uris, c.card_faces
        FROM deck_cards dc
-       JOIN cards c ON dc.card_id = c.id
+       	JOIN cards c ON dc.card_id = c.id
        WHERE dc.deck_id = $1
        ORDER BY c.name`,
 			[id]

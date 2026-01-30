@@ -4,6 +4,7 @@ import { Card, Counters } from '../store';
 interface CardDisplayProps {
 	card?: Card | null;
 	isTapped?: boolean;
+	isToken?: boolean;
 	counters?: Counters;
 	overlay?: React.ReactNode;
 	highlight?: boolean;
@@ -17,6 +18,7 @@ interface CardDisplayProps {
 export const CardDisplay: React.FC<CardDisplayProps> = ({
 	card,
 	isTapped = false,
+	isToken = false,
 	counters,
 	overlay,
 	highlight = false,
@@ -154,6 +156,29 @@ export const CardDisplay: React.FC<CardDisplayProps> = ({
 					}}
 				>
 					TAP
+				</div>
+			)}
+
+			{/* Token label overlay */}
+			{isToken && (
+				<div
+					style={{
+						position: 'absolute',
+						top: '33%',
+						left: 0,
+						backgroundColor: 'rgba(50, 50, 50, 0.7)',
+						color: '#fff',
+						padding: '4px 8px',
+						width: '100%',
+						textAlign: 'center' as const,
+						fontSize: '2em',
+						letterSpacing: '5px',
+						fontWeight: 'bold',
+						borderRadius: '4px',
+						pointerEvents: 'none',
+					}}
+				>
+					Token
 				</div>
 			)}
 
