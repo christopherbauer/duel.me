@@ -54,10 +54,9 @@ export const GameBoard: React.FC = () => {
 	const [librarySearchModal, setLibrarySearchModal] = useState<GameStateObjects[] | null>(null);
 	const [showAuditLog, setShowAuditLog] = useState(false);
 	const [lastMovedCardId, setLastMovedCardId] = useState<string | null>(null);
-	const [seat1Life, setSeat1Life] = useState<number>(0);
-	const [seat2Life, setSeat2Life] = useState<number>(0);
-	const [playerObjects, setPlayerObjects] = useState<GameStateObjects[]>([]);
-	const [opponentObjects, setOpponentObjects] = useState<GameStateObjects[]>([]);
+	const [seatLifeMap, setSeatLifeMap] = useState<{ [key: number]: number }>({});
+	const [seatObjectsMap, setSeatObjectsMap] = useState<{ [key: number]: GameStateObjects[] }>({});
+	const [allSeats, setAllSeats] = useState<number[]>([]);
 	const battlefieldRef = useRef<HTMLDivElement>(null);
 	const flippedSeatsRef = useRef<Set<number>>(new Set());
 
@@ -189,7 +188,7 @@ export const GameBoard: React.FC = () => {
 
 			// Handle Search Library specially - show modal first
 			if (action === 'search_library') {
-				const library = gameState.objects.filter((o) => o.zone === 'library' && o.seat === viewerSeat).sort((a, b) => a.order - b.order);
+				const library = gameState.objects.filter((o) => o.zone === 'library' && o.seat === viewerSeat);
 				setLibrarySearchModal(library);
 				return;
 			}
@@ -328,23 +327,42 @@ export const GameBoard: React.FC = () => {
 
 	useEffect(() => {
 		if (gameState) {
-			const seat1Objects = gameState.objects.filter((obj) => obj.seat === 1);
-			const seat2Objects = gameState.objects.filter((obj) => obj.seat === 2);
+			// Build life map from game state
+			const lifeMap: { [key: number]: number } = {};
+			for (let seat = 1; seat <= 4; seat++) {
+				const lifeValue = (gameState as any)[`seat${seat}_life`];
+				if (lifeValue !== undefined) {
+					lifeMap[seat] = lifeValue as number;
+				}
+			}
+			setSeatLifeMap(lifeMap);
 
-			setSeat1Life(gameState.seat1_life);
-			setSeat2Life(gameState.seat2_life);
-
-			const playerObjects = viewerSeat === 1 ? seat1Objects : seat2Objects;
-			setPlayerObjects(playerObjects);
-
-			const opponentObjects = viewerSeat === 1 ? seat2Objects : seat1Objects;
-			setOpponentObjects(opponentObjects);
+			// Build objects map for each seat
+			const objectsMap: { [key: number]: GameStateObjects[] } = {};
+			const seatsInGame = new Set<number>();
+			gameState.objects.forEach((obj) => {
+				seatsInGame.add(obj.seat);
+				if (!objectsMap[obj.seat]) {
+					objectsMap[obj.seat] = [];
+				}
+				objectsMap[obj.seat].push(obj);
+			});
+			setSeatObjectsMap(objectsMap);
+			setAllSeats(Array.from(seatsInGame).sort());
 		}
 	}, [gameState, viewerSeat]);
 
 	if (!gameState) {
 		return <div style={styles.loading}>Loading game...</div>;
 	}
+
+	// Helper functions to get player and opponent objects
+	const getPlayerObjects = (): GameStateObjects[] => seatObjectsMap[viewerSeat] || [];
+	const getOpponentObjects = (): GameStateObjects[] => {
+		return allSeats.filter((seat) => seat !== viewerSeat).flatMap((seat) => seatObjectsMap[seat] || []);
+	};
+	const getPlayerLife = (): number => seatLifeMap[viewerSeat] || 0;
+	const getOpponentSeats = (): number[] => allSeats.filter((seat) => seat !== viewerSeat);
 
 	function handleCardDropOnBattlefield(e: React.DragEvent<HTMLDivElement>, cardId: string) {
 		e.preventDefault();
@@ -394,8 +412,14 @@ export const GameBoard: React.FC = () => {
 			<div style={styles.header}>
 				<h1 style={styles.title}>duel.me — Game Board</h1>
 				<div style={styles.headerControls}>
-					<button onClick={() => setViewerSeat(viewerSeat === 1 ? 2 : 1)} style={styles.switchButton}>
-						Seat {viewerSeat === 1 ? 2 : 1}
+					<button
+						onClick={() => {
+							const nextSeatIndex = (allSeats.indexOf(viewerSeat) + 1) % allSeats.length;
+							setViewerSeat(allSeats[nextSeatIndex] as 1 | 2 | 3 | 4);
+						}}
+						style={styles.switchButton}
+					>
+						Seat {allSeats[(allSeats.indexOf(viewerSeat) + 1) % allSeats.length]}
 					</button>
 					<button onClick={() => setShowSettings(!showSettings)} style={styles.settingsButton}>
 						⋮
@@ -444,34 +468,36 @@ export const GameBoard: React.FC = () => {
 			<div style={styles.board}>
 				{/* Opponent Section (5%) */}
 				<div style={styles.opponentSection}>
-					<div style={styles.sectionHeader}>
-						<div style={styles.seatLabel}>{viewerSeat === 1 ? 'Seat 2 (Opponent)' : 'Seat 1 (Opponent)'}</div>
-						<div style={styles.lifeCounter}>
-							<span style={styles.lifeValue}>{viewerSeat === 1 ? seat2Life : seat1Life}</span>
-							<div style={styles.lifeBars}>
-								<button
-									style={styles.lifeButton}
-									onClick={() =>
-										handleGameAction('life_change', viewerSeat === 1 ? 2 : 1, {
-											amount: -1,
-										})
-									}
-								>
-									−
-								</button>
-								<button
-									style={styles.lifeButton}
-									onClick={() =>
-										handleGameAction('life_change', viewerSeat === 1 ? 2 : 1, {
-											amount: 1,
-										})
-									}
-								>
-									+
-								</button>
+					{getOpponentSeats().map((opponentSeat) => (
+						<div key={opponentSeat} style={styles.sectionHeader}>
+							<div style={styles.seatLabel}>Seat {opponentSeat} (Opponent)</div>
+							<div style={styles.lifeCounter}>
+								<span style={styles.lifeValue}>{seatLifeMap[opponentSeat] || 0}</span>
+								<div style={styles.lifeBars}>
+									<button
+										style={styles.lifeButton}
+										onClick={() =>
+											handleGameAction('life_change', opponentSeat, {
+												amount: -1,
+											})
+										}
+									>
+										−
+									</button>
+									<button
+										style={styles.lifeButton}
+										onClick={() =>
+											handleGameAction('life_change', opponentSeat, {
+												amount: 1,
+											})
+										}
+									>
+										+
+									</button>
+								</div>
 							</div>
 						</div>
-					</div>
+					))}
 					<div style={styles.zoneGrid}>
 						{['hand', 'library', 'graveyard', 'command_zone', 'exile'].map((zone) => {
 							const zoneLabel = zone === 'command_zone' ? 'Commander' : zone.charAt(0).toUpperCase() + zone.slice(1);
@@ -480,8 +506,8 @@ export const GameBoard: React.FC = () => {
 									key={zone}
 									zone={zone}
 									label={zoneLabel}
-									seat={viewerSeat === 1 ? 2 : 1}
-									objects={opponentObjects.filter((o) => o.zone === zone)}
+									seat={getOpponentSeats()[0] || viewerSeat}
+									objects={getOpponentObjects().filter((o) => o.zone === zone)}
 									redacted={zone === 'hand' || zone === 'library'}
 									onCountClick={() => setShowZoneBreakdown(`opponent-${zone}`)}
 									showBreakdown={false}
@@ -499,11 +525,11 @@ export const GameBoard: React.FC = () => {
 					<div style={zoneStyles.zoneLabel}>Battlefield</div>
 
 					{/* Opponent's cards mini preview */}
-					{opponentObjects.filter((o) => o.zone === 'battlefield').length > 0 && (
+					{getOpponentObjects().filter((o) => o.zone === 'battlefield').length > 0 && (
 						<div style={styles.opponentPreview}>
 							<div style={styles.opponentPreviewLabel}>Opponent's Field</div>
 							<div style={styles.opponentPreviewGrid}>
-								{opponentObjects
+								{getOpponentObjects()
 									.filter((o) => o.zone === 'battlefield')
 									.map((obj) => (
 										<div
@@ -611,7 +637,7 @@ export const GameBoard: React.FC = () => {
 					{/* Opponent card hover preview popup */}
 					{hoveredOpponentCard &&
 						(() => {
-							const hoveredCard = opponentObjects.find((o) => o.id === hoveredOpponentCard);
+							const hoveredCard = getOpponentObjects().find((o) => o.id === hoveredOpponentCard);
 							return (
 								hoveredCard && (
 									<div
@@ -633,12 +659,12 @@ export const GameBoard: React.FC = () => {
 					<div style={styles.sectionHeader}>
 						<div style={styles.seatLabel}>Seat {viewerSeat} (You)</div>
 						<div style={styles.lifeCounter}>
-							<span style={styles.lifeValue}>{viewerSeat === 1 ? seat1Life : seat2Life}</span>
+							<span style={styles.lifeValue}>{getPlayerLife()}</span>
 							<div style={styles.lifeBars}>
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										handleGameAction('life_change', viewerSeat === 1 ? 1 : 2, {
+										handleGameAction('life_change', viewerSeat, {
 											amount: -1,
 										})
 									}
@@ -648,7 +674,7 @@ export const GameBoard: React.FC = () => {
 								<button
 									style={styles.lifeButton}
 									onClick={() =>
-										handleGameAction('life_change', viewerSeat === 1 ? 1 : 2, {
+										handleGameAction('life_change', viewerSeat, {
 											amount: 1,
 										})
 									}
@@ -668,7 +694,7 @@ export const GameBoard: React.FC = () => {
 									zone={zone}
 									label={zoneLabel}
 									seat={viewerSeat}
-									objects={playerObjects.filter((o) => o.zone === zone)}
+									objects={getPlayerObjects().filter((o) => o.zone === zone)}
 									redacted={false}
 									onCardDragStart={(cardId) => setDraggedCard(cardId)}
 									onCountClick={() => setShowZoneBreakdown(`player-${zone}`)}
@@ -677,7 +703,7 @@ export const GameBoard: React.FC = () => {
 										setContextMenu({
 											x: e.clientX,
 											y: e.clientY,
-											type: zone,
+											type: zone as 'library' | 'hand' | 'graveyard' | 'exile' | 'battlefield',
 											objectId,
 										})
 									}

@@ -7,11 +7,18 @@ export interface GameSessionWithDecks {
 	name?: string;
 	status: 'active' | 'paused' | 'completed';
 	deck1_id: string;
-	deck2_id: string;
+	deck2_id?: string;
+	deck3_id?: string;
+	deck4_id?: string;
+	player_count?: 1 | 2 | 3 | 4;
 	deck1_name?: string;
 	deck2_name?: string;
+	deck3_name?: string;
+	deck4_name?: string;
 	seat1_life?: number;
 	seat2_life?: number;
+	seat3_life?: number;
+	seat4_life?: number;
 	created_at: string;
 	updated_at: string;
 	completed_at?: string;
@@ -33,24 +40,31 @@ export const ActiveGamesList: React.FC = () => {
 			const gamesWithDetails = await Promise.all(
 				gamesList.map(async (game) => {
 					try {
-						// Get deck names
-						const [deck1, deck2, gameState] = await Promise.all([
-							api.getDeck(game.deck1_id).catch(() => null),
-							api.getDeck(game.deck2_id).catch(() => null),
-							api.getGame(game.id, 1).catch(() => null),
-						]);
+						// Get all deck names and game state
+						const deckIds = [game.deck1_id, game.deck2_id, game.deck3_id, game.deck4_id].filter((id): id is string => id !== undefined);
+						const deckPromises = deckIds.map((id) => api.getDeck(id).catch(() => null));
+						const decks = await Promise.all(deckPromises);
+						const gameState = await api.getGame(game.id, 1).catch(() => null);
 
-						const deck1Name = (deck1 && deck1.data && deck1.data.name) || 'Unknown Deck';
-						const deck2Name = (deck2 && deck2.data && deck2.data.name) || 'Unknown Deck';
-						const seat1Life = gameState && gameState.data && gameState.data.seat1_life;
-						const seat2Life = gameState && gameState.data && gameState.data.seat2_life;
+						const deckNames = decks.map((d) => (d && d.data && d.data.name) || 'Unknown Deck');
+						const seats: Array<{ name?: string; life?: number }> = [];
+						for (let i = 0; i < 4; i++) {
+							seats[i] = {
+								name: deckNames[i],
+								life: gameState && gameState.data ? (gameState.data as any)[`seat${i + 1}_life`] : undefined,
+							};
+						}
 
 						return {
 							...game,
-							deck1_name: deck1Name,
-							deck2_name: deck2Name,
-							seat1_life: seat1Life,
-							seat2_life: seat2Life,
+							deck1_name: seats[0]?.name,
+							deck2_name: seats[1]?.name,
+							deck3_name: seats[2]?.name,
+							deck4_name: seats[3]?.name,
+							seat1_life: seats[0]?.life,
+							seat2_life: seats[1]?.life,
+							seat3_life: seats[2]?.life,
+							seat4_life: seats[3]?.life,
 						};
 					} catch (err) {
 						console.error(`Error loading details for game ${game.id}:`, err);
@@ -134,13 +148,20 @@ export const ActiveGamesList: React.FC = () => {
 							<div style={styles.detailRow}>
 								<span style={styles.detailLabel}>Decks:</span>
 								<span style={styles.detailValue}>
-									{game.deck1_name} vs {game.deck2_name}
+									{[game.deck1_name, game.deck2_name, game.deck3_name, game.deck4_name].filter(Boolean).join(' vs ')}
 								</span>
 							</div>
 							<div style={styles.detailRow}>
 								<span style={styles.detailLabel}>Life Totals:</span>
 								<span style={styles.detailValue}>
-									{game.seat1_life || '20'} / {game.seat2_life || '20'}
+									{[
+										`Seat 1: ${game.seat1_life || '20'}`,
+										game.seat2_life !== undefined ? `Seat 2: ${game.seat2_life || '20'}` : null,
+										game.seat3_life !== undefined ? `Seat 3: ${game.seat3_life || '20'}` : null,
+										game.seat4_life !== undefined ? `Seat 4: ${game.seat4_life || '20'}` : null,
+									]
+										.filter(Boolean)
+										.join(' | ')}
 								</span>
 							</div>
 						</div>

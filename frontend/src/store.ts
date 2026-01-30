@@ -98,13 +98,13 @@ export interface Position {
 
 export interface GameStore {
 	currentGameId: string | null;
-	viewerSeat: 1 | 2;
+	viewerSeat: 1 | 2 | 3 | 4;
 	gameState: GameState | null;
 	availableTokens: Card[];
 	availableComponents: Card[];
 
 	setCurrentGame: (gameId: string) => void;
-	setViewerSeat: (seat: 1 | 2) => void;
+	setViewerSeat: (seat: 1 | 2 | 3 | 4) => void;
 	setGameState: (state: GameState) => void;
 	setAvailableTokens: (tokens: Card[]) => void;
 	setAvailableComponents: (components: Card[]) => void;
@@ -119,7 +119,7 @@ export const useGameStore = create<GameStore>((set) => ({
 	availableComponents: [],
 
 	setCurrentGame: (gameId: string) => set({ currentGameId: gameId }),
-	setViewerSeat: (seat: 1 | 2) => set({ viewerSeat: seat }),
+	setViewerSeat: (seat: 1 | 2 | 3 | 4) => set({ viewerSeat: seat }),
 	setGameState: (state: GameState) => {
 		set({ gameState: state });
 		set({ viewerSeat: state.active_seat });

@@ -22,7 +22,7 @@ export const api = {
 	// Games
 	listGames: () => client.get('/games'),
 	createGame: (payload: CreateGameRequest) => client.post('/games', payload),
-	getGame: (id: string, viewerSeat?: 1 | 2) =>
+	getGame: (id: string, viewerSeat?: 1 | 2 | 3 | 4) =>
 		client.get(`/games/${id}`, {
 			params: { viewer_seat: viewerSeat || 1 },
 		}),
