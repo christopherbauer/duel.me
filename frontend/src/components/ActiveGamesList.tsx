@@ -41,18 +41,24 @@ export const ActiveGamesList: React.FC = () => {
 				gamesList.map(async (game) => {
 					try {
 						// Get all deck names and game state
-						const deckIds = [game.deck1_id, game.deck2_id, game.deck3_id, game.deck4_id].filter((id): id is string => id !== undefined);
-						const deckPromises = deckIds.map((id) => api.getDeck(id).catch(() => null));
+						const deckIds = [game.deck1_id, game.deck2_id, game.deck3_id, game.deck4_id];
+						const deckPromises = deckIds.map((id) => (id ? api.getDeck(id).catch(() => null) : Promise.resolve(null)));
 						const decks = await Promise.all(deckPromises);
 						const gameState = await api.getGame(game.id, 1).catch(() => null);
 
-						const deckNames = decks.map((d) => (d && d.data && d.data.name) || 'Unknown Deck');
 						const seats: Array<{ name?: string; life?: number }> = [];
 						for (let i = 0; i < 4; i++) {
-							seats[i] = {
-								name: deckNames[i],
-								life: gameState && gameState.data ? (gameState.data as any)[`seat${i + 1}_life`] : undefined,
-							};
+							const deck = decks[i];
+							const deckName = deck && deck.data && deck.data.name ? deck.data.name : undefined;
+							const lifeValue = gameState && gameState.data ? (gameState.data as any)[`seat${i + 1}_life`] : undefined;
+
+							// Only include seat if deck exists
+							if (deckIds[i]) {
+								seats[i] = {
+									name: deckName,
+									life: lifeValue,
+								};
+							}
 						}
 
 						return {
