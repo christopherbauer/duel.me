@@ -41,7 +41,8 @@ export const endTurn: ActionMethod = async (gameId, _seat, _metadata) => {
 		[gameId]
 	);
 	logger.info(`Verified: active_seat=${verifyResult?.rows[0]?.active_seat}, turn_number=${verifyResult?.rows[0]?.turn_number}`);
-
-	await handleGameAction(Actions.untap_all, gameId, nextSeat, {});
-	await handleGameAction(Actions.draw, gameId, nextSeat, { count: 1 });
+	return async () => {
+		await handleGameAction(Actions.untap_all, gameId, nextSeat, {});
+		await handleGameAction(Actions.draw, gameId, nextSeat, { count: 1 });
+	};
 };

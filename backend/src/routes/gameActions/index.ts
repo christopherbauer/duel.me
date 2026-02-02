@@ -72,8 +72,7 @@ const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 export const handleGameAction = async (action: keyof typeof Actions, gameId: string, seat: number, metadata: any) => {
 	logger.debug(`handleGameAction called with action: ${String(action)}`);
 	logger.debug(`action in actionMap: ${action in actionMap}`);
-	await actionMap[action](gameId, seat, metadata);
-	await query(`UPDATE game_sessions SET updated_at = NOW() WHERE id = $1`, [gameId]);
+	const actionResult = await actionMap[action](gameId, seat, metadata);
 	const actionId = uuidv4();
 
 	const { target_object_id } = metadata;
@@ -83,5 +82,10 @@ export const handleGameAction = async (action: keyof typeof Actions, gameId: str
        VALUES ($1, $2, $3, $4, $5, $6)`,
 		[actionId, gameId, seat, action, target_object_id || null, JSON.stringify(metadata)]
 	);
+	if (actionResult && typeof actionResult === 'function') {
+		// Some actions have post-effects (such as ending turn automatically handling untap/draw)
+		await actionResult();
+	}
+	await query(`UPDATE game_sessions SET updated_at = NOW() WHERE id = $1`, [gameId]);
 	return actionId;
 };
