@@ -802,7 +802,8 @@ export const GameBoard: React.FC = () => {
 			{gameId && <GameAuditLog gameId={gameId} isOpen={showAuditLog} onClose={() => setShowAuditLog(false)} />}
 
 			<div style={styles.turnInfo}>
-				Turn {gameState.turn_number} • Active: Seat {gameState.active_seat}
+				Round {Math.floor((gameState.turn_number - 1) / allSeats.length) + 1} • Turn {gameState.turn_number} • Active: Seat{' '}
+				{gameState.active_seat}
 			</div>
 		</div>
 	);
