@@ -5,6 +5,7 @@ interface CardDisplayProps {
 	card?: Card | null;
 	isTapped?: boolean;
 	isToken?: boolean;
+	isStolen?: boolean;
 	counters?: Counters;
 	overlay?: React.ReactNode;
 	highlight?: boolean;
@@ -19,6 +20,7 @@ export const CardDisplay: React.FC<CardDisplayProps> = ({
 	card,
 	isTapped = false,
 	isToken = false,
+	isStolen = false,
 	counters,
 	overlay,
 	highlight = false,
@@ -82,6 +84,7 @@ export const CardDisplay: React.FC<CardDisplayProps> = ({
 			style={{
 				...containerStyle,
 				...style,
+				border: isStolen ? '3px solid #FFD700' : containerStyle.border,
 			}}
 		>
 			{imageUrl ? (

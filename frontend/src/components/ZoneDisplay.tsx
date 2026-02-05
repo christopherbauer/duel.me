@@ -9,6 +9,8 @@ interface ZoneDisplayProps {
 	redacted: boolean;
 	showBreakdown?: boolean;
 	seat: number;
+	isOpponent?: boolean;
+	opponentSeat?: number;
 	typeBreakdown?: {
 		creatures: number;
 		instants: number;
@@ -31,6 +33,8 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 	redacted,
 	showBreakdown,
 	seat,
+	isOpponent,
+	opponentSeat,
 	onCardDragStart,
 	onCountClick,
 	onContextMenu,
@@ -132,7 +136,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 										}}
 										title={obj.card ? obj.card.name : 'Unknown'}
 									>
-										<CardDisplay card={obj.card} compact />
+										<CardDisplay card={obj.card} isControlled={obj.controller !== obj.seat} compact />
 									</div>
 								))}
 						</div>
@@ -219,7 +223,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 									}}
 									title={obj.card ? obj.card.name : 'Unknown'}
 								>
-									<CardDisplay card={obj.card} compact />
+									<CardDisplay card={obj.card} isControlled={obj.controller !== obj.seat} compact />
 								</div>
 							))}
 						</div>
@@ -266,7 +270,7 @@ export const ZoneDisplay: React.FC<ZoneDisplayProps> = ({
 										}}
 										title={obj.card ? obj.card.name : 'Unknown'}
 									>
-										<CardDisplay card={obj.card} compact />
+										<CardDisplay card={obj.card} isControlled={obj.controller !== obj.seat} compact />
 									</div>
 								);
 							})}

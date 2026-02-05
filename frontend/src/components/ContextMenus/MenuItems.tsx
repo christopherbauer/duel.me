@@ -230,3 +230,53 @@ export const emptyBattlefieldMenuItems = (position?: { x: number; y: number }): 
 		],
 	},
 ];
+
+export const opponentLibraryMenuItems = (objectId?: string, opponentSeat?: number): MenuItem[] => [
+	{ label: 'Search Library', action: 'search_library' },
+	{ label: 'Shuffle Library', action: 'shuffle_library' },
+	{
+		label: 'Draw',
+		submenu: [
+			{ label: '1', action: 'draw', metadata: { count: 1 } },
+			{ label: '2', action: 'draw', metadata: { count: 2 } },
+			{ label: '3', action: 'draw', metadata: { count: 3 } },
+			{ label: '4', action: 'draw', metadata: { count: 4 } },
+		],
+	},
+	{
+		label: 'Mill',
+		submenu: [
+			{ label: '1', action: 'mill', metadata: { count: 1 } },
+			{ label: '2', action: 'mill', metadata: { count: 2 } },
+			{ label: '3', action: 'mill', metadata: { count: 3 } },
+			{ label: '4', action: 'mill', metadata: { count: 4 } },
+		],
+	},
+	{
+		label: 'Scry',
+		submenu: [
+			{ label: '1', action: 'scry', metadata: { count: 1 } },
+			{ label: '2', action: 'scry', metadata: { count: 2 } },
+			{ label: '3', action: 'scry', metadata: { count: 3 } },
+			{ label: '4', action: 'scry', metadata: { count: 4 } },
+		],
+	},
+	{
+		label: 'Surveil',
+		submenu: [
+			{ label: '1', action: 'surveil', metadata: { count: 1 } },
+			{ label: '2', action: 'surveil', metadata: { count: 2 } },
+			{ label: '3', action: 'surveil', metadata: { count: 3 } },
+			{ label: '4', action: 'surveil', metadata: { count: 4 } },
+		],
+	},
+	{
+		label: 'Exile',
+		submenu: [
+			{ label: '1', action: 'exile_from_top', metadata: { count: 1 } },
+			{ label: '2', action: 'exile_from_top', metadata: { count: 2 } },
+			{ label: '3', action: 'exile_from_top', metadata: { count: 3 } },
+			{ label: '4', action: 'exile_from_top', metadata: { count: 4 } },
+		],
+	},
+];

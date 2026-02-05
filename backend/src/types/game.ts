@@ -95,6 +95,7 @@ export interface GameObject {
 	id: string;
 	game_session_id: string;
 	seat: 1 | 2 | 3 | 4;
+	controller: 1 | 2 | 3 | 4;
 	zone: Zone;
 	card_id: string;
 	is_token: boolean;

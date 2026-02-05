@@ -39,8 +39,9 @@ export const GameBoard: React.FC = () => {
 	const [contextMenu, setContextMenu] = useState<{
 		x: number;
 		y: number;
-		type: 'library' | 'hand' | 'graveyard' | 'exile' | 'battlefield';
+		type: 'library' | 'hand' | 'graveyard' | 'exile' | 'battlefield' | 'opponent_library';
 		objectId?: string;
+		opponentSeat?: number;
 	} | null>(null);
 	const [hoveredOpponentCard, setHoveredOpponentCard] = useState<string | null>(null);
 	const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
@@ -340,12 +341,14 @@ export const GameBoard: React.FC = () => {
 			const objectsMap: { [key: number]: GameStateObjects[] } = {};
 			const seatsInGame = new Set<number>();
 			gameState.objects.forEach((obj) => {
-				seatsInGame.add(obj.seat);
-				if (!objectsMap[obj.seat]) {
-					objectsMap[obj.seat] = [];
+				const stateObjectSeat = obj.controller || obj.seat; // Use controller for theft, fallback to seat for older game states
+				seatsInGame.add(stateObjectSeat);
+				if (!objectsMap[stateObjectSeat]) {
+					objectsMap[stateObjectSeat] = [];
 				}
-				objectsMap[obj.seat].push(obj);
+				objectsMap[stateObjectSeat].push(obj);
 			});
+			console.log('Built seat objects map:', objectsMap);
 			setSeatObjectsMap(objectsMap);
 			setAllSeats(Array.from(seatsInGame).sort());
 		}
@@ -500,16 +503,29 @@ export const GameBoard: React.FC = () => {
 					<div style={styles.zoneGrid}>
 						{['hand', 'library', 'graveyard', 'command_zone', 'exile'].map((zone) => {
 							const zoneLabel = zone === 'command_zone' ? 'Commander' : zone.charAt(0).toUpperCase() + zone.slice(1);
+							const opponentSeat = getOpponentSeats()[0];
 							return (
 								<ZoneDisplay
 									key={zone}
 									zone={zone}
 									label={zoneLabel}
-									seat={getOpponentSeats()[0] || viewerSeat}
+									seat={opponentSeat || viewerSeat}
 									objects={getOpponentObjects().filter((o) => o.zone === zone)}
-									redacted={zone === 'hand' || zone === 'library'}
+									redacted={zone === 'hand'}
+									isOpponent={true}
+									opponentSeat={opponentSeat}
 									onCountClick={() => setShowZoneBreakdown(`opponent-${zone}`)}
 									showBreakdown={false}
+									onContextMenu={(e, objectId) => {
+										const contextType = zone === 'library' ? 'opponent_library' : (zone as any);
+										setContextMenu({
+											x: e.clientX,
+											y: e.clientY,
+											type: contextType,
+											objectId,
+											opponentSeat,
+										});
+									}}
 									onExileModalOpen={(cards) => setExileModal(cards)}
 									onGraveyardModalOpen={(cards) => setGraveyardModal(cards)}
 									onGameAction={handleGameAction}
@@ -544,7 +560,14 @@ export const GameBoard: React.FC = () => {
 											}}
 											onMouseLeave={() => setHoveredOpponentCard(null)}
 										>
-											<CardDisplay card={obj.card} isToken={obj.is_token} isTapped={obj.is_tapped} counters={obj.counters} scale={0.5} />
+											<CardDisplay
+												card={obj.card}
+												isToken={obj.is_token}
+												isTapped={obj.is_tapped}
+												counters={obj.counters}
+												isStolen={obj.controller !== obj.seat}
+												scale={0.5}
+											/>
 										</div>
 									))}
 							</div>
@@ -572,7 +595,7 @@ export const GameBoard: React.FC = () => {
 						}}
 					>
 						{gameState.objects
-							.filter((o) => o.zone === 'battlefield' && o.seat === viewerSeat)
+							.filter((o) => o.zone === 'battlefield' && o.controller === viewerSeat)
 							.map((obj) => (
 								<div
 									key={obj.id}
@@ -618,14 +641,21 @@ export const GameBoard: React.FC = () => {
 										left: `${obj.position ? obj.position.x : 0}px`,
 										top: `${obj.position ? obj.position.y : 0}px`,
 										opacity: draggedCard === obj.id ? 0.5 : 1,
-										transform: invertOpponent && obj.seat !== viewerSeat ? 'rotate(180deg)' : undefined,
+										transform: invertOpponent && obj.controller !== viewerSeat ? 'rotate(180deg)' : undefined,
 										zIndex:
 											obj.id === lastMovedCardId
 												? gameState.objects.filter((o) => o.zone === 'battlefield' && o.seat === viewerSeat).length
 												: 1,
 									}}
 								>
-									<CardDisplay card={obj.card} isToken={obj.is_token} isTapped={obj.is_tapped} counters={obj.counters} scale={cardScale} />
+									<CardDisplay
+										card={obj.card}
+										isToken={obj.is_token}
+										isTapped={obj.is_tapped}
+										counters={obj.counters}
+										isStolen={obj.controller !== obj.seat}
+										scale={cardScale}
+									/>
 								</div>
 							))}
 					</div>
@@ -749,6 +779,7 @@ export const GameBoard: React.FC = () => {
 					y={contextMenu.y}
 					type={contextMenu.type}
 					objectId={contextMenu.objectId}
+					opponentSeat={contextMenu.opponentSeat}
 					onClose={() => setContextMenu(null)}
 					executeAction={handleGameAction}
 				/>
@@ -762,7 +793,7 @@ export const GameBoard: React.FC = () => {
 				<ExileModal
 					cards={exileModal}
 					onMoveCard={(cardId, zone) => {
-						handleGameAction(`move_to_${zone}`, undefined, {
+						handleGameAction(`move_to_${zone}`, gameState.active_seat, {
 							objectId: cardId,
 						});
 					}}
@@ -774,7 +805,7 @@ export const GameBoard: React.FC = () => {
 				<GraveyardModal
 					cards={graveyardModal}
 					onMoveCard={(cardId, zone) => {
-						handleGameAction(`move_to_${zone}`, undefined, {
+						handleGameAction(`move_to_${zone}`, gameState.active_seat, {
 							objectId: cardId,
 						});
 					}}

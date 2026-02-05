@@ -280,8 +280,6 @@ router.get('/:id', async (req, res) => {
 			color: row.color,
 		}));
 
-		const parsedCard = () => {};
-
 		// Project visibility: hide opponent's hand and library
 		const projectedObjects = objectsResult.map((obj) => {
 			const isOpponent = obj.seat !== viewerSeat;
@@ -290,6 +288,7 @@ router.get('/:id', async (req, res) => {
 			return {
 				id: obj.id,
 				seat: obj.seat,
+				controller: obj.controller,
 				zone: obj.zone,
 				card:
 					!isOpponent || !isHiddenZone

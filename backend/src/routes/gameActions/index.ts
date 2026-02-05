@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { tap, untap, toggleTap, untapAll } from './tap';
-import { drawFromLibrary, moveToLibrary, scry, shuffleLibrary, surveil, mill } from './library';
+import { drawFromLibrary, moveToLibrary, scry, shuffleLibrary, surveil, mill, stealCard } from './library';
 import { lifeChange } from './lifeChange';
 import { exileTopFromLibrary, moveToExile } from './exile';
 import { moveToBattlefield, moveToGraveyard, moveToHand, cast } from './play';
@@ -39,6 +39,7 @@ export enum Actions {
 	delete_indicator = 'delete_indicator',
 	cast = 'cast',
 	end_turn = 'end_turn',
+	steal_card = 'steal_card',
 }
 
 const actionMap: Record<keyof typeof Actions, ActionMethod> = {
@@ -68,6 +69,7 @@ const actionMap: Record<keyof typeof Actions, ActionMethod> = {
 	delete_indicator: deleteIndicator,
 	cast: cast,
 	end_turn: endTurn,
+	steal_card: stealCard,
 };
 export const handleGameAction = async (action: keyof typeof Actions, gameId: string, seat: number, metadata: any) => {
 	logger.debug(`handleGameAction called with action: ${String(action)}`);

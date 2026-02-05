@@ -27,6 +27,7 @@ export interface GameState {
 export interface GameStateObjects {
 	id: string;
 	seat: number;
+	controller: number;
 	zone: Zone;
 	card: Card | null;
 	is_tapped: boolean;

@@ -5,6 +5,7 @@ export enum ContextMenuType {
 	Exile = 'exile',
 	CommandZone = 'command_zone',
 	Battlefield = 'battlefield',
+	OpponentLibrary = 'opponent_library',
 }
 
 export interface MenuItem {

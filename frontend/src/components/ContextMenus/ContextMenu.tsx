@@ -9,6 +9,7 @@ import {
 	commandZoneMenuItems,
 	battlefieldMenuItems,
 	graveyardMenuItems,
+	opponentLibraryMenuItems,
 } from './MenuItems';
 
 // Custom hook for managing submenu timeout behavior
@@ -36,8 +37,9 @@ const typeToMenuItemsMap: (
 	objectId?: string,
 	availableTokens?: Card[],
 	availableComponents?: Card[],
-	position?: { x: number; y: number }
-) => Record<ContextMenuType, MenuItem[]> = (objectId, availableTokens = [], availableComponents = [], position) => ({
+	position?: { x: number; y: number },
+	opponentSeat?: number
+) => Record<ContextMenuType, MenuItem[]> = (objectId, availableTokens = [], availableComponents = [], position, opponentSeat) => ({
 	[ContextMenuType.Library]: libraryMenuItems(),
 	[ContextMenuType.Hand]: handMenuItems(objectId),
 	[ContextMenuType.Graveyard]: graveyardMenuItems(objectId),
@@ -46,17 +48,19 @@ const typeToMenuItemsMap: (
 	[ContextMenuType.Battlefield]: objectId
 		? battlefieldMenuItems(objectId)
 		: backgroundTokenMenuItems(availableTokens, availableComponents, position),
+	[ContextMenuType.OpponentLibrary]: opponentLibraryMenuItems(objectId, opponentSeat),
 });
 interface ContextMenuProps {
 	x: number;
 	y: number;
-	type: 'library' | 'hand' | 'graveyard' | 'exile' | 'command_zone' | 'battlefield';
+	type: 'library' | 'hand' | 'graveyard' | 'exile' | 'command_zone' | 'battlefield' | 'opponent_library';
 	objectId?: string;
+	opponentSeat?: number;
 	onClose: () => void;
 	executeAction: ActionMethod;
 }
 
-const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, type, objectId, onClose, executeAction }) => {
+const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, type, objectId, opponentSeat, onClose, executeAction }) => {
 	const [hoveredSubmenu, setHoveredSubmenu] = useState<string | null>(null);
 	const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 	const { set: setMenuTimeout, clear: clearMenuTimeout } = useSubmenuTimeout();
@@ -73,12 +77,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, type, objectId, onClose
 	const { availableTokens, availableComponents } = useGameStore();
 
 	const menuItems = useMemo(() => {
-		return typeToMenuItemsMap(objectId, availableTokens, availableComponents, { x, y })[type];
-	}, [type, objectId, availableTokens, availableComponents, x, y]);
+		return typeToMenuItemsMap(objectId, availableTokens, availableComponents, { x, y }, opponentSeat)[type];
+	}, [type, objectId, availableTokens, availableComponents, x, y, opponentSeat]);
 
 	const handleMenuItemClick = (item: MenuItem) => {
 		if (item.action) {
-			executeAction(item.action, undefined, item.metadata);
+			const seat = type === 'opponent_library' ? opponentSeat : undefined;
+			executeAction(item.action, seat, item.metadata);
 			onClose();
 		}
 	};

@@ -34,15 +34,38 @@ export const mill: ActionMethod<DrawMetadata> = async (gameId, seat, metadata) =
 	);
 	if (millResult && millResult.rows) {
 		for (const row of millResult.rows) {
+			// Mill sends cards to owner's graveyard
 			await query(`UPDATE game_objects SET zone = 'graveyard' WHERE id = $1`, [row.id]);
 		}
 	}
 };
 export const moveToLibrary: ActionMethod = async (_gameId, _seat, metadata) => {
-	// Move card back to library from anywhere
+	// Move card back to owner's library from anywhere
 	const objectId = metadata.objectId;
 	if (objectId) {
 		await query(`UPDATE game_objects SET zone = 'library' WHERE id = $1`, [objectId]);
+	}
+};
+
+interface StealCardMetadata {
+	objectId: string;
+	sourceSeat: number;
+}
+export const stealCard: ActionMethod<StealCardMetadata> = async (gameId, controllerSeat, metadata) => {
+	// Change controller of a card while keeping owner (seat) the same
+	const { objectId, sourceSeat } = metadata;
+	if (!objectId || !sourceSeat) return;
+
+	// Verify the card exists and is owned by sourceSeat
+	const cardResult = await query<{ seat: number; controller: number }>(
+		`SELECT seat, controller FROM game_objects WHERE id = $1 AND game_session_id = $2 AND seat = $3`,
+		[objectId, gameId, sourceSeat]
+	);
+
+	if (cardResult && cardResult.rows && cardResult.rows.length > 0) {
+		// Transfer control to the active player
+		await query(`UPDATE game_objects SET controller = $1 WHERE id = $2`, [controllerSeat, objectId]);
+		logger.info(`Card ${objectId} stolen from seat ${sourceSeat} by seat ${controllerSeat} in game ${gameId}`);
 	}
 };
 interface ScryMetadata {
@@ -50,12 +73,12 @@ interface ScryMetadata {
 	arrangement?: { top: string[]; bottom: string[] };
 }
 export const scry: ActionMethod<ScryMetadata> = async (gameId, seat, metadata) => {
-	// Scry: arrange top X cards, unplaced go to bottom
+	// Scry: arrange top X cards of owned library, unplaced go to bottom
 	const { count, arrangement } = metadata;
 	if (arrangement && count) {
 		const { top, bottom } = arrangement;
 
-		// Get all library cards currently
+		// Get all library cards owned by this seat (regardless of controller)
 		const allCardsResult = await query(
 			`SELECT id FROM game_objects
 					 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
@@ -87,12 +110,12 @@ interface SurveilMetadata {
 	arrangement?: { top: string[]; graveyard?: string[] };
 }
 export const surveil: ActionMethod<SurveilMetadata> = async (gameId, seat, metadata) => {
-	// Surveil: arrange cards, putting some to graveyard
+	// Surveil: arrange owned cards, putting some to owner's graveyard
 	const { count, arrangement } = metadata;
 	if (arrangement) {
 		const { top, graveyard } = arrangement;
 
-		// Get all library cards currently
+		// Get all library cards owned by this seat (regardless of controller)
 		const allCardsResult = await query(
 			`SELECT id FROM game_objects
 					 WHERE game_session_id = $1 AND seat = $2 AND zone = 'library'
