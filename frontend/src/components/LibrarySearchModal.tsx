@@ -6,7 +6,7 @@ interface LibrarySearchModalProps {
 	gameStateObjects: GameStateObjects[];
 	onClose: () => void;
 	onCloseAndShuffle: () => void;
-	onMoveCard: (cardId: string, zone: 'hand' | 'library' | 'graveyard' | 'exile') => void;
+	onMoveCard: (cardId: string, zone: 'battlefield' | 'hand' | 'library' | 'graveyard' | 'exile') => void;
 }
 
 interface ContextMenu {
@@ -23,7 +23,9 @@ export const LibrarySearchModal: React.FC<LibrarySearchModalProps> = ({ gameStat
 		() =>
 			gameStateObjects.filter((gameStateObject) => {
 				if (!searchTerm) return true;
-				return (gameStateObject?.card?.name + gameStateObject?.card?.type_line).toLowerCase().includes(searchTerm.toLowerCase());
+				return ((gameStateObject?.card?.name || '') + (gameStateObject?.card?.type_line || ''))
+					.toLowerCase()
+					.includes(searchTerm.toLowerCase());
 			}),
 		[searchTerm, gameStateObjects]
 	);
@@ -33,7 +35,7 @@ export const LibrarySearchModal: React.FC<LibrarySearchModalProps> = ({ gameStat
 		setContextMenu({ x: e.clientX, y: e.clientY, cardId });
 	};
 
-	const handleMoveCard = (zone: 'hand' | 'library' | 'graveyard' | 'exile') => {
+	const handleMoveCard = (zone: 'battlefield' | 'hand' | 'library' | 'graveyard' | 'exile') => {
 		if (contextMenu) {
 			onMoveCard(contextMenu.cardId, zone);
 			setContextMenu(null);
@@ -96,6 +98,14 @@ export const LibrarySearchModal: React.FC<LibrarySearchModalProps> = ({ gameStat
 							top: `${contextMenu.y}px`,
 						}}
 					>
+						<div
+							style={styles.contextMenuItem}
+							onClick={() => handleMoveCard('battlefield')}
+							onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#444')}
+							onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+						>
+							Cast
+						</div>
 						<div
 							style={styles.contextMenuItem}
 							onClick={() => handleMoveCard('hand')}

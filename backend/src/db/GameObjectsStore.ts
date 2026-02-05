@@ -1,20 +1,24 @@
 import { query } from '../core/pool';
 
 const GameObjectsStore = () => {
-	const moveToLocation = async (objectId: string, seat: number, zone: string) => {
-		await query(`UPDATE game_objects SET zone = $1, controller = $2 WHERE id = $3`, [zone, seat, objectId]);
+	const moveToLocation = async (objectId: string, seat: number | null, zone: string) => {
+		if (seat) {
+			await query(`UPDATE game_objects SET zone = $1, controller = $2 WHERE id = $3`, [zone, seat, objectId]);
+		} else {
+			await query(`UPDATE game_objects SET zone = $1 WHERE id = $2`, [zone, objectId]);
+		}
 	};
-	const moveToGraveyard = async (objectId: string, seat: number) => {
-		await moveToLocation(objectId, seat, 'graveyard');
+	const moveToGraveyard = async (objectId: string) => {
+		await moveToLocation(objectId, null, 'graveyard');
 	};
-	const moveToHand = async (objectId: string, seat: number) => {
-		await moveToLocation(objectId, seat, 'hand');
+	const moveToHand = async (objectId: string) => {
+		await moveToLocation(objectId, null, 'hand');
 	};
-	const moveToExile = async (objectId: string, seat: number) => {
-		await moveToLocation(objectId, seat, 'exile');
+	const moveToExile = async (objectId: string) => {
+		await moveToLocation(objectId, null, 'exile');
 	};
-	const moveToCommandZone = async (objectId: string, seat: number) => {
-		await moveToLocation(objectId, seat, 'command');
+	const moveToCommandZone = async (objectId: string) => {
+		await moveToLocation(objectId, null, 'command');
 	};
 	const moveToBattlefield = async (objectId: string, seat: number) => {
 		await moveToLocation(objectId, seat, 'battlefield');

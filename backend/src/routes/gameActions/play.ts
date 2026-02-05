@@ -29,7 +29,7 @@ export const moveToBattlefield: ActionMethod<MoveToBattlefieldMetadata> = async 
 	}
 };
 
-export const moveToGraveyard: ActionMethod = async (_gameId, seat, metadata) => {
+export const moveToGraveyard: ActionMethod = async (_gameId, _seat, metadata) => {
 	// Move card to graveyard from battlefield or hand
 	// If it's a token, delete it instead
 	const objectId = metadata.objectId;
@@ -42,12 +42,12 @@ export const moveToGraveyard: ActionMethod = async (_gameId, seat, metadata) => 
 			await GameObjectsStore().deleteToken(objectId);
 		} else {
 			// Move card to graveyard
-			await GameObjectsStore().moveToGraveyard(objectId, seat);
+			await GameObjectsStore().moveToGraveyard(objectId);
 		}
 	}
 };
 
-export const moveToHand: ActionMethod = async (_gameId, seat, metadata) => {
+export const moveToHand: ActionMethod = async (_gameId, _seat, metadata) => {
 	// Move card back to hand from graveyard or exile
 	const objectId = metadata.objectId;
 	const isToken = await checkToken(objectId);
@@ -56,7 +56,7 @@ export const moveToHand: ActionMethod = async (_gameId, seat, metadata) => {
 		await GameObjectsStore().deleteToken(objectId);
 	} else {
 		if (objectId) {
-			await GameObjectsStore().moveToHand(objectId, seat);
+			await GameObjectsStore().moveToHand(objectId);
 		}
 	}
 };

@@ -48,6 +48,7 @@ export const createTokenCopy: ActionMethod<CreateTokenMetadata> = async (gameId,
 			tokenObjectId,
 			gameId,
 			seat,
+			seat,
 			'battlefield',
 			cardIdToUse,
 			true, // is_token
@@ -55,7 +56,7 @@ export const createTokenCopy: ActionMethod<CreateTokenMetadata> = async (gameId,
 
 		let insertQuery = `
 			INSERT INTO game_objects 
-			(id, game_session_id, seat, zone, card_id, is_token`;
+			(id, game_session_id, seat, controller, zone, card_id, is_token`;
 
 		if (position) {
 			insertQuery += `, position`;
@@ -64,7 +65,7 @@ export const createTokenCopy: ActionMethod<CreateTokenMetadata> = async (gameId,
 			params.push(JSON.stringify({ x: offsetX, y: offsetY }));
 		}
 
-		insertQuery += `) VALUES ($1, $2, $3, $4, $5, $6`;
+		insertQuery += `) VALUES ($1, $2, $3, $4, $5, $6, $7`;
 
 		if (position) {
 			insertQuery += `, $${params.length}`;

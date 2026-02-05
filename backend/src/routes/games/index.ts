@@ -282,33 +282,27 @@ router.get('/:id', async (req, res) => {
 
 		// Project visibility: hide opponent's hand and library
 		const projectedObjects = objectsResult.map((obj) => {
-			const isOpponent = obj.seat !== viewerSeat;
-			const isHiddenZone = obj.zone === 'hand' || obj.zone === 'library';
-
 			return {
 				id: obj.id,
 				seat: obj.seat,
 				controller: obj.controller,
 				zone: obj.zone,
-				card:
-					!isOpponent || !isHiddenZone
-						? {
-								id: obj.card_id,
-								name: obj.name,
-								type_line: obj.type_line,
-								oracle_text: obj.oracle_text,
-								mana_cost: obj.mana_cost,
-								cmc: obj.cmc,
-								power: obj.power,
-								toughness: obj.toughness,
-								colors: obj.colors,
-								color_identity: obj.color_identity,
-								keywords: obj.keywords,
-								layout: obj.layout,
-								image_uris: obj.image_uris,
-								card_faces: obj.card_faces,
-							}
-						: null,
+				card: {
+					id: obj.card_id,
+					name: obj.name,
+					type_line: obj.type_line,
+					oracle_text: obj.oracle_text,
+					mana_cost: obj.mana_cost,
+					cmc: obj.cmc,
+					power: obj.power,
+					toughness: obj.toughness,
+					colors: obj.colors,
+					color_identity: obj.color_identity,
+					keywords: obj.keywords,
+					layout: obj.layout,
+					image_uris: obj.image_uris,
+					card_faces: obj.card_faces,
+				},
 				is_token: obj.is_token,
 				is_tapped: obj.is_tapped,
 				is_flipped: obj.is_flipped,

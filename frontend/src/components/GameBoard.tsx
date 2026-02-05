@@ -188,7 +188,7 @@ export const GameBoard: React.FC = () => {
 
 			// Handle Search Library specially - show modal first
 			if (action === 'search_library') {
-				const library = gameState.objects.filter((o) => o.zone === 'library' && o.seat === viewerSeat);
+				const library = gameState.objects.filter((o) => o.zone === 'library' && o.seat === seat);
 				setLibrarySearchModal(library);
 				return;
 			}
@@ -196,7 +196,7 @@ export const GameBoard: React.FC = () => {
 			// Handle Scry and Surveil specially - show modal first
 			if (action === 'scry' || action === 'surveil') {
 				const count = (metadata && metadata.count) || 1;
-				const library = gameState.objects.filter((o) => o.zone === 'library' && o.seat === viewerSeat);
+				const library = gameState.objects.filter((o) => o.zone === 'library' && o.seat === seat);
 				// Get top X cards from library
 				const topCards = library.slice(0, count);
 				setScryModal({
